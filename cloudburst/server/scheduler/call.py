@@ -28,6 +28,7 @@ from cloudburst.shared.reference import CloudburstReference
 from cloudburst.shared.serializer import Serializer
 
 serializer = Serializer()
+import logging
 
 
 def call_function(func_call_socket, pusher_cache, policy):
@@ -56,6 +57,8 @@ def call_function(func_call_socket, pusher_cache, policy):
 
     # Forward the request on to the chosen executor node.
     ip, tid = result
+    logging.info('Pick executor %s:%d in call func' % (ip, tid))
+
     sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
     sckt.send(call.SerializeToString())
 
@@ -119,6 +122,7 @@ def call_dag(call, pusher_cache, dags, policy, request_id=None):
 
         ip, tid = result
         schedule.locations[fref.name] = ip + ':' + str(tid)
+        logging.info('Pick executor %s:%d for %s' % (ip, tid, fref.name))
 
         # copy over arguments into the dag schedule
         arg_list = schedule.arguments[fref.name]

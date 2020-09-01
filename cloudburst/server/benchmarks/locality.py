@@ -131,11 +131,17 @@ def run(cloudburst_client, num_requests, create, sckt):
             start = time.time()
             arg_map = {'dot': refs}
 
-            cloudburst_client.call_dag(dag_name, arg_map, True)
+            rid = cloudburst_client.call_dag(dag_name, arg_map, True)
             end = time.time()
 
             epoch_total.append(end - start)
             total_time.append(end - start)
+
+            # start = time.time()
+            # rid.get()
+            # end = time.time()
+
+            # kvs_time.append(end - start)
 
             log_end = time.time()
             if (log_end - log_start) > 10:

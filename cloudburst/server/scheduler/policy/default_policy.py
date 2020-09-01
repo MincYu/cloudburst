@@ -343,7 +343,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
 
     def process_status(self, status):
         key = (status.ip, status.tid)
-        logging.info('Received status update from executor %s:%d.' %
+        logging.debug('Received status update from executor %s:%d.' %
                      (key[0], int(key[1])))
 
         # This means that this node is currently departing, so we remove it

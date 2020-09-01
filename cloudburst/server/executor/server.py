@@ -43,6 +43,7 @@ BATCH_SIZE_MAX = 20
 
 
 def executor(ip, mgmt_ip, schedulers, thread_id):
+    # logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(message)s')
     logging.basicConfig(filename='log_executor.txt', level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
@@ -416,12 +417,12 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
             # set.
             utils.push_status(schedulers, pusher_cache, status)
 
-            logging.info('Total thread occupancy: %.6f' % (utilization))
+            # logging.info('Total thread occupancy: %.6f' % (utilization))
 
-            for event in event_occupancy:
-                occ = event_occupancy[event] / (report_end - report_start)
-                logging.info('\tEvent %s occupancy: %.6f' % (event, occ))
-                event_occupancy[event] = 0.0
+            # for event in event_occupancy:
+            #     occ = event_occupancy[event] / (report_end - report_start)
+            #     logging.info('\tEvent %s occupancy: %.6f' % (event, occ))
+            #     event_occupancy[event] = 0.0
 
             stats = ExecutorStatistics()
             for fname in runtimes:
