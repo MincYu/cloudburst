@@ -26,7 +26,7 @@ USER root
 # none are specified, we use hydro-project/cloudburst by default. Install the KVS
 # client from the Anna project.
 WORKDIR $HYDRO_HOME/cloudburst
-RUN git remote remove origin && git remote add origin https://github.com/$repo_org/cloudburst
+RUN git remote remove origin && git remote add origin https://github.com/MincYu/cloudburst
 RUN git fetch -p origin && git checkout -b $build_branch origin/$source_branch
 RUN rm -rf /usr/lib/python3/dist-packages/yaml
 RUN rm -rf /usr/lib/python3/dist-packages/PyYAML-*
