@@ -40,47 +40,51 @@ from cloudburst.shared.proto.cloudburst_pb2 import CloudburstError, DAG_ALREADY_
 from cloudburst.shared.reference import CloudburstReference
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-f_elb = 'ada8a56372a614d2dbbc201653a6016b-1438011676.us-east-1.elb.amazonaws.com'
-my_ip = '3.236.208.240'
+f_elb = 'aa33fb15a80c3441288cbe51058e44ac-683213724.us-east-1.elb.amazonaws.com'
+my_ip = '34.239.170.193'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
-def test(cloudburst, a, b):
+def test(cloudburst, v1, v2, v3, v4):
     # import numpy as np
-    # s = np.add(a, b)
-    # key = 'sum'
-    # res = cloudburst.put(key, s)
-    # return res
-    import time
-    time.sleep(1)
+    # s = np.add(v1, v2)
+    # s = np.add(s, v3)
+    # s = np.add(s, v4)
+    s = np.zeros(v1.size)
+    key = 'sum'
+    res = cloudburst.put(key, s)
+    return res
+    # import time
+    # time.sleep(1)
 
-name = 'test_1'
-# test_func = cloudburst_client.get_function('test')
-# if test_func is None:
-    # print('register func')
-test_func = cloudburst_client.register(test, name)
+OSIZE = 1000000
+# cloudburst_client.delete_dag('test_0')
+# exit(0)
 
-cloudburst_client.register_dag(name, [name], [])
+def prepare_input():
+    refs = ()
+    k_v1, k_v2, k_v3, k_v4 = 'v1', 'v2', 'v3', 'v4'
 
-OSIZE = 10000000
-a = np.zeros(OSIZE)
-b = np.ones(OSIZE)
-k_a = 'zero'
-cloudburst_client.put_object(k_a, a)
-ref_a = CloudburstReference(k_a, True)
+    if cloudburst_client.kvs_client.get(k_v1)[k_v1] is None:
+        v1 = np.zeros(OSIZE)
+        v2 = np.zeros(OSIZE)
+        v3 = np.ones(OSIZE)
+        v4 = np.ones(OSIZE)
 
-k_b = 'one'
-cloudburst_client.put_object(k_b, b)
-ref_b = CloudburstReference(k_b, True)
+        cloudburst_client.put_object(k_v1, v1)
+        cloudburst_client.put_object(k_v2, v2)
+        cloudburst_client.put_object(k_v3, v3)
+        cloudburst_client.put_object(k_v4, v4)
 
-arg_map = {name: (ref_a, ref_b)}
-print('Prepared')
+    refs += (CloudburstReference(k_v1, True),)
+    refs += (CloudburstReference(k_v2, True),)
+    refs += (CloudburstReference(k_v3, True),)
+    refs += (CloudburstReference(k_v4, True),)
+    
+    return refs
 
-# rid = cloudburst_client.call_dag(name, arg_map) 
-# test_func(ref_a, ref_b)
-
+num_requests = 10
 def exec_one(cloudburst_client, tid, name, arg_map):
-    num_requests = 1
     total_time = []
     scheduler_time = []
     kvs_time = []
@@ -113,25 +117,27 @@ def exec_one(cloudburst_client, tid, name, arg_map):
     # if kvs_time:
     #     utils.print_latency_stats(kvs_time, 'KVS')
 
+def register(client, name, func, force=True):
 
-max_workers = 10
+    cloud_func = client.get_function(name)
+    if force or cloud_func is None:
+        cloud_func = client.register(func, name)
+    
+    client.register_dag(name, [name], [])
+    return name
+
+max_workers = 4
+name_pre = 'test_'
+refs = prepare_input()
+
 all_clients = [cloudburst_client]
+all_dags = [register(cloudburst_client, name_pre + '0', test)]
 for i in range(1, max_workers):
-    all_clients.append(CloudburstConnection(f_elb, my_ip, tid=i, local=False))
+    cur_client = CloudburstConnection(f_elb, my_ip, tid=i, local=False)
+    all_clients.append(cur_client)
+    all_dags.append(register(cur_client, name_pre + str(i), test))
 
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 pool = ThreadPoolExecutor(max_workers=max_workers)
-for tid, client in zip(range(max_workers), all_clients):
-    pool.submit(exec_one, client, tid, name, arg_map)
-
-# i = test_func(0).get()
-# j = test_func(1).get()
-# print(i, j)
-
-# rids = []
-# for i in range(2):
-#     rids.append(test_func(i))
-# print('scheduled')
-
-# res = [ rid.get() for rid in rids]
-# print(res)
+for tid, dag, client in zip(range(max_workers), all_dags, all_clients):
+    pool.submit(exec_one, client, tid, dag, {dag: refs})
