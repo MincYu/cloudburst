@@ -40,19 +40,21 @@ from cloudburst.shared.proto.cloudburst_pb2 import CloudburstError, DAG_ALREADY_
 from cloudburst.shared.reference import CloudburstReference
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-f_elb = 'ac42ba7fd7a784f37bcb2d714af87fc8-1544868072.us-east-1.elb.amazonaws.com'
-my_ip = '18.206.238.17'
+f_elb = 'ada8a56372a614d2dbbc201653a6016b-1438011676.us-east-1.elb.amazonaws.com'
+my_ip = '3.236.208.240'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
 def test(cloudburst, a, b):
-    import numpy as np
-    s = np.add(a, b)
-    key = 'sum'
-    res = cloudburst.put(key, s)
-    return res
+    # import numpy as np
+    # s = np.add(a, b)
+    # key = 'sum'
+    # res = cloudburst.put(key, s)
+    # return res
+    import time
+    time.sleep(1)
 
-name = 'test_2'
+name = 'test_1'
 # test_func = cloudburst_client.get_function('test')
 # if test_func is None:
     # print('register func')
@@ -72,42 +74,55 @@ cloudburst_client.put_object(k_b, b)
 ref_b = CloudburstReference(k_b, True)
 
 arg_map = {name: (ref_a, ref_b)}
-rid = cloudburst_client.call_dag(name, arg_map) 
+print('Prepared')
+
+# rid = cloudburst_client.call_dag(name, arg_map) 
 # test_func(ref_a, ref_b)
-print('scheduled')
 
-# exit(0)
+def exec_one(cloudburst_client, tid, name, arg_map):
+    num_requests = 1
+    total_time = []
+    scheduler_time = []
+    kvs_time = []
 
-num_requests = 10
-total_time = []
-scheduler_time = []
-kvs_time = []
+    retries = 0
 
-retries = 0
+    for _ in range(num_requests):
+        start = time.time()
+        rid = cloudburst_client.call_dag(name, arg_map)
+        end = time.time()
 
-for _ in range(num_requests):
-    start = time.time()
-    rid = cloudburst_client.call_dag(name, arg_map)
-    end = time.time()
+        stime = end - start
 
-    stime = end - start
+        start = time.time()
+        rid.get()
+        end = time.time()
 
-    start = time.time()
-    rid.get()
-    end = time.time()
+        ktime = end - start
 
-    ktime = end - start
+        total_time += [stime + ktime]
+        scheduler_time += [stime]
+        kvs_time += [ktime]
 
-    total_time += [stime + ktime]
-    scheduler_time += [stime]
-    kvs_time += [ktime]
 
-if total_time:
-    utils.print_latency_stats(total_time, 'E2E')
-if scheduler_time:
-    utils.print_latency_stats(scheduler_time, 'SCHEDULER')
-if kvs_time:
-    utils.print_latency_stats(kvs_time, 'KVS')
+    print(f'{tid} runtime info: {np.average(total_time)} {np.average(scheduler_time)}')
+    # if total_time:
+    #     utils.print_latency_stats(total_time, 'E2E')
+    # if scheduler_time:
+    #     utils.print_latency_stats(scheduler_time, 'SCHEDULER')
+    # if kvs_time:
+    #     utils.print_latency_stats(kvs_time, 'KVS')
+
+
+max_workers = 10
+all_clients = [cloudburst_client]
+for i in range(1, max_workers):
+    all_clients.append(CloudburstConnection(f_elb, my_ip, tid=i, local=False))
+
+from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
+pool = ThreadPoolExecutor(max_workers=max_workers)
+for tid, client in zip(range(max_workers), all_clients):
+    pool.submit(exec_one, client, tid, name, arg_map)
 
 # i = test_func(0).get()
 # j = test_func(1).get()
