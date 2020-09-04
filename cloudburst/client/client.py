@@ -104,9 +104,11 @@ class CloudburstConnection():
         prefix: An optional argument which, if specified, prunes the list of
         returned functions to match the provided prefix.
         '''
-
+        func_name_list = []
         for fname in self._get_func_list(prefix):
             print(fname)
+            func_name_list.append(fname)
+        return func_name_list
 
     def get_function(self, name):
         '''
