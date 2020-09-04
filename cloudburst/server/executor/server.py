@@ -92,7 +92,13 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     # If the management IP is set to None, that means that we are running in
     # local mode, so we use a regular AnnaTcpClient rather than an IPC client.
     if mgmt_ip:
-        client = AnnaIpcClient(thread_id, context)
+        force_remote_anna = False
+        if 'FORCE_REMOTE' in os.environ:
+            force_remote_anna = os.environ['FORCE_REMOTE'] == '0'
+        if force_remote_anna:
+            client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
+        else:
+            client = AnnaIpcClient(thread_id, context)
         local = False
     else:
         client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
