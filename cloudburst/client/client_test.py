@@ -40,32 +40,50 @@ from cloudburst.shared.proto.cloudburst_pb2 import CloudburstError, DAG_ALREADY_
 from cloudburst.shared.reference import CloudburstReference
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-f_elb = 'aa33fb15a80c3441288cbe51058e44ac-683213724.us-east-1.elb.amazonaws.com'
+if len(sys.argv) < 2:
+    print('Usage: ./client_test.py {workload} ')
+    exit(1)
+
+chosen_test = sys.argv[1]
+
+f_elb = 'a408d3fc98a9f4aaa9165a1e6299d758-1512068383.us-east-1.elb.amazonaws.com'
 my_ip = '34.239.170.193'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
-def test(cloudburst, v1, v2, v3, v4):
+if chosen_test == 'clean':
+    all_func = cloudburst_client.list()
+    for f in all_func:
+        suc, err = cloudburst_client.delete_dag(f)
+
+        print(f'Delete {f} {suc}')
+    exit(0)
+
+def write_test(cloudburst, size):
     # import numpy as np
     # s = np.add(v1, v2)
     # s = np.add(s, v3)
     # s = np.add(s, v4)
-    s = np.zeros(v1.size)
-    key = 'sum'
-    res = cloudburst.put(key, s)
+    new_v = np.zeros(size)
+    for key in ['v1', 'v2', 'v3', 'v4']:
+        res = cloudburst.put(key, new_v)
     return res
-    # import time
-    # time.sleep(1)
 
-OSIZE = 1000000
+def read_test(cloudburst, v1, v2, v3, v4):
+    v1 = v2
+    v3 = v4
+    return
+
 # cloudburst_client.delete_dag('test_0')
 # exit(0)
 
-def prepare_input():
+OSIZE = 4000000
+
+def prepare_input(force=False):
     refs = ()
     k_v1, k_v2, k_v3, k_v4 = 'v1', 'v2', 'v3', 'v4'
 
-    if cloudburst_client.kvs_client.get(k_v1)[k_v1] is None:
+    if force or cloudburst_client.kvs_client.get(k_v1)[k_v1] is None:
         v1 = np.zeros(OSIZE)
         v2 = np.zeros(OSIZE)
         v3 = np.ones(OSIZE)
@@ -83,7 +101,7 @@ def prepare_input():
     
     return refs
 
-num_requests = 10
+num_requests = 1
 def exec_one(cloudburst_client, tid, name, arg_map):
     total_time = []
     scheduler_time = []
@@ -109,7 +127,7 @@ def exec_one(cloudburst_client, tid, name, arg_map):
         kvs_time += [ktime]
 
 
-    print(f'{tid} runtime info: {np.average(total_time)} {np.average(scheduler_time)}')
+    print(f'worker {tid} runtime info. mean: {np.average(total_time)}, std: {np.std(total_time)}, sche: {np.average(scheduler_time)}')
     # if total_time:
     #     utils.print_latency_stats(total_time, 'E2E')
     # if scheduler_time:
@@ -126,16 +144,24 @@ def register(client, name, func, force=True):
     client.register_dag(name, [name], [])
     return name
 
-max_workers = 4
-name_pre = 'test_'
-refs = prepare_input()
+all_test_suite = {
+    'read': ('read_test_', read_test, prepare_input()),
+    'write': ('write_test_', write_test, (OSIZE))
+}
+
+if chosen_test not in all_test_suite:
+    print(f'No such workload {chosen_test}')
+    exit(1)
+
+max_workers = 3
+name_pre, test_func, refs = all_test_suite[chosen_test][0],  all_test_suite[chosen_test][1], all_test_suite[chosen_test][2]
 
 all_clients = [cloudburst_client]
-all_dags = [register(cloudburst_client, name_pre + '0', test)]
+all_dags = [register(cloudburst_client, name_pre + '0', test_func)]
 for i in range(1, max_workers):
     cur_client = CloudburstConnection(f_elb, my_ip, tid=i, local=False)
     all_clients.append(cur_client)
-    all_dags.append(register(cur_client, name_pre + str(i), test))
+    all_dags.append(register(cur_client, name_pre + str(i), test_func))
 
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 pool = ThreadPoolExecutor(max_workers=max_workers)
