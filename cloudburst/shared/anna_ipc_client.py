@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 import logging
-
+import os
 from anna.base_client import BaseAnnaClient
 import zmq
 
@@ -63,6 +63,7 @@ class AnnaIpcClient(BaseAnnaClient):
 
         self.rid = 0
 
+        self.return_put_time = os.environ['RETURN_PUT_TIME'] == 0
         # Set this to None because we do not use the address cache, but the
         # super class checks to see if there is one.
         self.address_cache = None
@@ -185,7 +186,10 @@ class AnnaIpcClient(BaseAnnaClient):
 
                 for tup in resp.tuples:
                     num_responses += 1
-                    result[tup.key] = (tup.error == NO_ERROR)
+                    if self.return_put_time:
+                        result[tup.key] = (tup.error == NO_ERROR, self._deserialize(tup))
+                    else:
+                        result[tup.key] = (tup.error == NO_ERROR)
 
         return result
 
