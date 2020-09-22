@@ -26,6 +26,7 @@ from cloudburst.shared.proto.cloudburst_pb2 import (
     FunctionCall,
     GenericResponse,
     NORMAL,  # Cloudburst consistency modes
+    MULTI,
     MULTIEXEC # Cloudburst's execution types
 )
 from cloudburst.shared.proto.shared_pb2 import StringSet
@@ -296,6 +297,35 @@ class CloudburstConnection():
         r.ParseFromString(self.dag_delete_sock.recv())
 
         return r.success, r.error
+
+    def get(self, ref, deserialize=True):
+        if type(ref) != list:
+            refs = [ref]
+        else:
+            refs = ref
+
+        kv_pairs = self.kvs_client.get(refs)
+        result = {}
+
+        # Deserialize each of the lattice objects and return them to the
+        # client.
+        for key in kv_pairs:
+            if kv_pairs[key] is None:
+                # If the key is not in the kvs, we can just return None.
+                result[key] = None
+            else:
+                if deserialize:
+                    result[key] = serializer.load_lattice(kv_pairs[key])
+                else:
+                    result[key] = kv_pairs[key].reveal()
+
+        if type(ref) == list:
+            return result
+        else:
+            return result[ref]
+
+    def put(self, key, value):
+        return self.put_object(key, value)
 
     def get_object(self, key):
         '''
