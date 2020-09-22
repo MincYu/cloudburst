@@ -49,7 +49,10 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
     def __init__(self, context, pusher_cache, ip, tid, anna_client):
         self.executor_ip = ip
         self.executor_tid = tid
-        self.anna_client = anna_client
+        self.anna_client, self.remote_client = anna_client, None
+
+        if type(anna_client) == tuple and len(anna_client) == 2:
+            self.anna_client, self.remote_client = anna_client[0], anna_client[1]
 
         self.pusher_cache = pusher_cache
 
@@ -60,16 +63,23 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         self.recv_inbox_socket = context.socket(zmq.PULL)
         self.recv_inbox_socket.bind(self.address)
 
-    def put(self, ref, value):
-        return self.anna_client.put(ref, serializer.dump_lattice(value))
+    def put(self, ref, value, client_type=0):
+        client = self.anna_client
+        if client_type == 1 and self.remote_client != None:
+            client = self.remote_client
+        return client.put(ref, serializer.dump_lattice(value))
 
-    def get(self, ref, deserialize=True):
+    def get(self, ref, deserialize=True, client_type=0):
         if type(ref) != list:
             refs = [ref]
         else:
             refs = ref
 
-        kv_pairs = self.anna_client.get(refs)
+        client = self.anna_client
+        if client_type == 1 and self.remote_client != None:
+            client = self.remote_client
+
+        kv_pairs = client.get(refs)
         result = {}
 
         # Deserialize each of the lattice objects and return them to the

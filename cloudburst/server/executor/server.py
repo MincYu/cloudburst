@@ -91,21 +91,29 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
     # If the management IP is set to None, that means that we are running in
     # local mode, so we use a regular AnnaTcpClient rather than an IPC client.
+    user_library = None
     if mgmt_ip:
-        force_remote_anna = False
+        force_remote_anna = 1
         if 'FORCE_REMOTE' in os.environ:
-            force_remote_anna = os.environ['FORCE_REMOTE'] == '0'
-        if force_remote_anna:
+            force_remote_anna = int(os.environ['FORCE_REMOTE'])
+
+        if force_remote_anna == 0: # remote anna only
             client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
-        else:
+        elif force_remote_anna == 1: # anna cache
             client = AnnaIpcClient(thread_id, context)
+        elif force_remote_anna == 2: # control both cache and remote anna
+            remote_client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
+            cache_client = AnnaIpcClient(thread_id, context)
+            client = cache_client
+            user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, (cache_client, remote_client))
+
         local = False
     else:
         client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
         local = True
 
-    user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id,
-                                      client)
+    if user_library is None:
+        user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, client)
 
     status = ThreadStatus()
     status.ip = ip
