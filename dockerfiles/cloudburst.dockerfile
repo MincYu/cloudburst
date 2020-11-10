@@ -38,7 +38,8 @@ WORKDIR /
 # Install Trigger KVS client
 RUN git clone https://github.com/MincYu/ephe-store
 WORKDIR /ephe-store
-RUN cd client/python && python3.6 setup.py install
+RUN cd kvs/client/python && python3.6 setup.py install
+WORKDIR /
 
 # These installations are currently pipeline specific until we figure out a
 # better way to do package management for Python.
