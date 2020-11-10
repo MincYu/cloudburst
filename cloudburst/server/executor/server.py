@@ -26,6 +26,7 @@ from cloudburst.server.executor import utils
 from cloudburst.server.executor.call import exec_function, exec_dag_function
 from cloudburst.server.executor.pin import pin, unpin
 from cloudburst.server.executor.user_library import CloudburstUserLibrary
+from cloudburst.server.executor.user_library import StorageUserLibrary
 from cloudburst.shared.anna_ipc_client import AnnaIpcClient
 from cloudburst.shared.proto.cloudburst_pb2 import (
     DagSchedule,
@@ -93,19 +94,24 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     # local mode, so we use a regular AnnaTcpClient rather than an IPC client.
     user_library = None
     if mgmt_ip:
-        force_remote_anna = 1
-        if 'FORCE_REMOTE' in os.environ:
-            force_remote_anna = int(os.environ['FORCE_REMOTE'])
-
-        if force_remote_anna == 0: # remote anna only
+        if 'STORAGE_OR_DEFAULT' in os.environ and os.environ['STORAGE_OR_DEFAULT'] == '0':
             client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
-        elif force_remote_anna == 1: # anna cache
+            user_library = StorageUserLibrary(thread_id, context)
+        else:
             client = AnnaIpcClient(thread_id, context)
-        elif force_remote_anna == 2: # control both cache and remote anna
-            remote_client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
-            cache_client = AnnaIpcClient(thread_id, context)
-            client = cache_client
-            user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, (cache_client, remote_client))
+        # force_remote_anna = 1
+        # if 'FORCE_REMOTE' in os.environ:
+        #     force_remote_anna = int(os.environ['FORCE_REMOTE'])
+
+        # if force_remote_anna == 0: # remote anna only
+        #     client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
+        # elif force_remote_anna == 1: # anna cache
+        #     client = AnnaIpcClient(thread_id, context)
+        # elif force_remote_anna == 2: # control both cache and remote anna
+        #     remote_client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
+        #     cache_client = AnnaIpcClient(thread_id, context)
+        #     client = cache_client
+        #     user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, (cache_client, remote_client))
 
         local = False
     else:

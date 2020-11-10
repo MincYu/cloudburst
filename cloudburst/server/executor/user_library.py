@@ -16,6 +16,7 @@ import zmq
 
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
+from kvs.client import KVSClient
 
 serializer = Serializer()
 
@@ -40,7 +41,6 @@ class AbstractCloudburstUserLibrary:
     def recv(self):
         raise NotImplementedError
 
-
 class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
     # ip: Executor IP.
@@ -49,10 +49,7 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
     def __init__(self, context, pusher_cache, ip, tid, anna_client):
         self.executor_ip = ip
         self.executor_tid = tid
-        self.anna_client, self.remote_client = anna_client, None
-
-        if type(anna_client) == tuple and len(anna_client) == 2:
-            self.anna_client, self.remote_client = anna_client[0], anna_client[1]
+        self.anna_client = anna_client
 
         self.pusher_cache = pusher_cache
 
@@ -62,24 +59,17 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Socket on which inbound messages, if any, will be received.
         self.recv_inbox_socket = context.socket(zmq.PULL)
         self.recv_inbox_socket.bind(self.address)
+    
+    def put(self, ref, value):
+        return self.anna_client.put(ref, serializer.dump_lattice(value))
 
-    def put(self, ref, value, client_type=0):
-        client = self.anna_client
-        if client_type == 1 and self.remote_client != None:
-            client = self.remote_client
-        return client.put(ref, serializer.dump_lattice(value))
-
-    def get(self, ref, deserialize=True, client_type=0):
+    def get(self, ref, deserialize=True):
         if type(ref) != list:
             refs = [ref]
         else:
             refs = ref
 
-        client = self.anna_client
-        if client_type == 1 and self.remote_client != None:
-            client = self.remote_client
-
-        kv_pairs = client.get(refs)
+        kv_pairs = self.anna_client.get(refs)
         result = {}
 
         # Deserialize each of the lattice objects and return them to the
@@ -136,3 +126,34 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Closes the context for this request by clearing any outstanding
         # messages.
         self.recv()
+
+class StorageUserLibrary(AbstractCloudburstUserLibrary):
+    def __init__(self, context, tid):
+        # TODO create the coordination-supported kvs client
+        self.client = KVSClient(thread_id=0, context=context)
+    
+    def put(self, ref, value):
+        if type(ref) == list and type(value) == list:
+            results = []
+            for r, v in zip(ref, value):
+                results.append(self.client.put(r, v))
+            return results
+        else:
+            return self.client.put(ref, value)
+
+    def get(self, ref, deserialize=True):
+        if type(ref) == list:
+            return [self.client.get(r) for r in ref]
+        else:
+            return self.client.get(ref)
+
+    # This implementation currently does not support send and recv
+    # we use stub here following CloudburstUserLibrary
+    def send(self, dest, bytestr):
+        return
+    
+    def recv(self):
+        return []
+    
+    def close(self):
+        return

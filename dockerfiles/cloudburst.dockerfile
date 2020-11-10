@@ -35,6 +35,11 @@ WORKDIR anna
 RUN cd client/python && python3.6 setup.py install
 WORKDIR /
 
+# Install Trigger KVS client
+RUN git clone https://github.com/MincYu/ephe-store
+WORKDIR /ephe-store
+RUN cd client/python && python3.6 setup.py install
+
 # These installations are currently pipeline specific until we figure out a
 # better way to do package management for Python.
 RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image

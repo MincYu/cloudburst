@@ -29,7 +29,6 @@ gen_yml_list() {
   echo -e "$RESULT"
 }
 
-
 # Download latest version of the code from relevant repository & branch -- if
 # none are specified, we use hydro-project/cloudburst by default. Install the KVS
 # client from the Anna project.
