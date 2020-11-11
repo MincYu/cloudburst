@@ -40,7 +40,7 @@ from cloudburst.shared.serializer import Serializer
 serializer = Serializer()
 
 
-def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_ephe=has_ephe):
+def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_ephe=False):
     call = FunctionCall()
     call.ParseFromString(exec_socket.recv())
 
