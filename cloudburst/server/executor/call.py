@@ -40,7 +40,7 @@ from cloudburst.shared.serializer import Serializer
 serializer = Serializer()
 
 
-def exec_function(exec_socket, kvs, user_library, cache, function_cache):
+def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_ephe=has_ephe):
     call = FunctionCall()
     call.ParseFromString(exec_socket.recv())
 
@@ -58,6 +58,11 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache):
         result = ('ERROR', sutils.error.SerializeToString())
     else:
         function_cache[call.name] = f
+
+        # We set the session as the response key from scheduler
+        # It should be uuid and identical
+        if not has_ephe:
+            user_library.session = call.response_key
         try:
             if call.consistency == NORMAL:
                 result = _exec_func_normal(kvs, f, fargs, user_library, cache)
@@ -73,17 +78,20 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache):
             sutils.error.error = EXECUTION_ERROR
             result = ('ERROR: ' + str(e), sutils.error.SerializeToString())
 
-    if call.consistency == NORMAL:
-        result = serializer.dump_lattice(result)
-        succeed = kvs.put(call.response_key, result)
-    else:
-        result = serializer.dump_lattice(result, MultiKeyCausalLattice,
-                                         causal_dependencies=dependencies)
-        succeed = kvs.causal_put(call.response_key, result)
+    # When we use ephe kvs for coordination, we do not write the results to anna
+    # Instead, we presume the function will put the result mannually
+    if not has_ephe:
+        if call.consistency == NORMAL:
+            result = serializer.dump_lattice(result)
+            succeed = kvs.put(call.response_key, result)
+        else:
+            result = serializer.dump_lattice(result, MultiKeyCausalLattice,
+                                            causal_dependencies=dependencies)
+            succeed = kvs.causal_put(call.response_key, result)
 
-    if not succeed:
-        logging.info(f'Unsuccessful attempt to put key {call.response_key} '
-                     + 'into the KVS.')
+        if not succeed:
+            logging.info(f'Unsuccessful attempt to put key {call.response_key} '
+                        + 'into the KVS.')
 
 
 def _exec_func_normal(kvs, func, args, user_lib, cache):

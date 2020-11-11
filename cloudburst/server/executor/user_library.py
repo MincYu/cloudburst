@@ -16,7 +16,7 @@ import zmq
 
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
-from kvs.client import KVSClient
+from ephekvs.client import KVSClient
 
 serializer = Serializer()
 
@@ -46,7 +46,7 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
     # ip: Executor IP.
     # tid: Executor thread ID.
     # anna_client: The Anna client, used for interfacing with the kvs.
-    def __init__(self, context, pusher_cache, ip, tid, anna_client):
+    def __init__(self, context, pusher_cache, ip, tid, anna_client, has_ephe=False):
         self.executor_ip = ip
         self.executor_tid = tid
         self.anna_client = anna_client
@@ -59,11 +59,46 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Socket on which inbound messages, if any, will be received.
         self.recv_inbox_socket = context.socket(zmq.PULL)
         self.recv_inbox_socket.bind(self.address)
-    
-    def put(self, ref, value):
+
+        self.has_ephe = has_ephe
+        if has_ephe:
+            self.ephe_client = KVSClient(thread_id=0, context=context)
+            self.session = None
+
+    def put(self, ref, value, init_session=False, durable=True):
+        if durable or not self.has_ephe:
+            self.put_anna(self, ref, value)
+        else:
+            self.put_ephe(self, ref, value, init_session=init_session)
+
+    def get(self, ref, deserialize=True, durable=True):
+        if durable or not self.has_ephe:
+            self.get_anna(self, ref, deserialize=deserialize)
+        else:
+            self.get_ephe(self, ref)
+
+    def put_ephe(self, bucket_key, value, init_session=False):
+        # ref should be (bucket, key, session) tuple if it is a bucket key, otherwise it is a list
+        if type(bucket_key) == list and type(value) == list:
+            results = []
+            for b_k_s, v in zip(bucket_key, value):
+                cur_session = self.session if init_session else b_k_s[2]
+                results.append(self.ephe_client.put(b_k_s[0], b_k_s[1], v, session=cur_session))
+            return results
+        else:
+            cur_session = self.session if init_session else bucket_key[2]
+            return self.ephe_client.put(bucket_key[0], bucket_key[1], v, session=cur_session)
+
+    def get_ephe(self, bucket_key):
+        if type(bucket_key) == list:
+            return [self.client.get(b_k_s[0], b_k_s[1], session=b_k_s[2]) for b_k_s in bucket_key]
+        else:
+            return self.client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
+
+    def put_anna(self, ref, value):
         return self.anna_client.put(ref, serializer.dump_lattice(value))
 
-    def get(self, ref, deserialize=True):
+    def get_anna(self, ref, deserialize=True):
         if type(ref) != list:
             refs = [ref]
         else:
@@ -126,34 +161,3 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Closes the context for this request by clearing any outstanding
         # messages.
         self.recv()
-
-class StorageUserLibrary(AbstractCloudburstUserLibrary):
-    def __init__(self, context, tid):
-        # TODO create the coordination-supported kvs client
-        self.client = KVSClient(thread_id=0, context=context)
-    
-    def put(self, ref, value):
-        if type(ref) == list and type(value) == list:
-            results = []
-            for r, v in zip(ref, value):
-                results.append(self.client.put(r, v))
-            return results
-        else:
-            return self.client.put(ref, value)
-
-    def get(self, ref, deserialize=True):
-        if type(ref) == list:
-            return [self.client.get(r) for r in ref]
-        else:
-            return self.client.get(ref)
-
-    # This implementation currently does not support send and recv
-    # we use stub here following CloudburstUserLibrary
-    def send(self, dest, bytestr):
-        return
-    
-    def recv(self):
-        return []
-    
-    def close(self):
-        return

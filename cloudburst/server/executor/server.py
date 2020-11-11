@@ -26,7 +26,6 @@ from cloudburst.server.executor import utils
 from cloudburst.server.executor.call import exec_function, exec_dag_function
 from cloudburst.server.executor.pin import pin, unpin
 from cloudburst.server.executor.user_library import CloudburstUserLibrary
-from cloudburst.server.executor.user_library import StorageUserLibrary
 from cloudburst.shared.anna_ipc_client import AnnaIpcClient
 from cloudburst.shared.proto.cloudburst_pb2 import (
     DagSchedule,
@@ -92,11 +91,11 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
     # If the management IP is set to None, that means that we are running in
     # local mode, so we use a regular AnnaTcpClient rather than an IPC client.
-    user_library = None
+    has_ephe = False
     if mgmt_ip:
         if 'STORAGE_OR_DEFAULT' in os.environ and os.environ['STORAGE_OR_DEFAULT'] == '0':
             client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
-            user_library = StorageUserLibrary(thread_id, context)
+            has_ephe = True
         else:
             client = AnnaIpcClient(thread_id, context)
         # force_remote_anna = 1
@@ -118,8 +117,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
         client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
         local = True
 
-    if user_library is None:
-        user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, client)
+    user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, client, has_ephe=has_ephe)
 
     status = ThreadStatus()
     status.ip = ip
@@ -206,7 +204,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
         if exec_socket in socks and socks[exec_socket] == zmq.POLLIN:
             work_start = time.time()
             exec_function(exec_socket, client, user_library, cache,
-                          function_cache)
+                          function_cache, has_ephe=has_ephe)
             user_library.close()
 
             utils.push_status(schedulers, pusher_cache, status)
