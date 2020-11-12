@@ -22,7 +22,9 @@ from cloudburst.shared.proto.cloudburst_pb2 import (
     DagTrigger,
     FunctionCall,
     GenericResponse,
-    NO_RESOURCES  # Cloudburst's error types
+    NO_RESOURCES,  # Cloudburst's error types
+    CLIENT,
+    STORAGE
 )
 from cloudburst.shared.reference import CloudburstReference
 from cloudburst.shared.serializer import Serializer
@@ -43,29 +45,48 @@ def call_function(func_call_socket, pusher_cache, policy):
 
     # Filter the arguments for CloudburstReferences, and use the policy engine to
     # pick a node for this request.
-    refs = list(filter(lambda arg: type(arg) == CloudburstReference,
-                       map(lambda arg: serializer.load(arg),
-                           call.arguments.values)))
-    result = policy.pick_executor(refs)
+    if call.source_hint == STORAGE:
+        # It means the invocation is from storage, 
+        # so we parse the arguments in a different way
+        args = map(lambda arg: serializer.load(arg), call.arguments.values)
+        # TODO get a locations and create the real call
+        refs = list(filter(lambda arg: type(arg) == CloudburstReference))
+        result = policy.pick_executor(refs)
 
-    response = GenericResponse()
-    if result is None:
-        response.success = False
-        response.error = NO_RESOURCES
+        if result is None:
+            logging.error('No executor available for STORAGE CALL')
+            return
+
+        ip, tid = result
+        logging.info('Pick executor %s:%d for STORAGE CALL' % (ip, tid))
+
+        sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
+        sckt.send(call.SerializeToString())
+    else:
+        # From normal cloudburst client
+        refs = list(filter(lambda arg: type(arg) == CloudburstReference,
+                        map(lambda arg: serializer.load(arg),
+                            call.arguments.values)))
+        result = policy.pick_executor(refs)
+
+        response = GenericResponse()
+        if result is None:
+            response.success = False
+            response.error = NO_RESOURCES
+            func_call_socket.send(response.SerializeToString())
+            return
+
+        # Forward the request on to the chosen executor node.
+        ip, tid = result
+        # logging.info('Pick executor %s:%d in call func' % (ip, tid))
+
+        sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
+        sckt.send(call.SerializeToString())
+
+        # Send a success response to the user with the response key.
+        response.success = True
+        response.response_id = call.response_key
         func_call_socket.send(response.SerializeToString())
-        return
-
-    # Forward the request on to the chosen executor node.
-    ip, tid = result
-    # logging.info('Pick executor %s:%d in call func' % (ip, tid))
-
-    sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
-    sckt.send(call.SerializeToString())
-
-    # Send a success response to the user with the response key.
-    response.success = True
-    response.response_id = call.response_key
-    func_call_socket.send(response.SerializeToString())
 
 
 def call_dag(call, pusher_cache, dags, policy, request_id=None):
