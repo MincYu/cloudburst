@@ -96,8 +96,35 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
         # Indicates if we are running in local mode
         self.local = local
     
-    def pick_executor_with_loc(self, locations):
-        pass
+    def pick_executor_with_loc(self, function_name, locations):
+        # TODO try pick executor that have both function and data first
+        # Check if available executors have local data
+        # Otherwise pick randomly
+
+        executors = set(self.unpinned_cpu_executors)
+        chosen_exe = None
+
+        if len(executors) == 0:
+            return None
+
+        avail_executors = []
+        for ip, tid in executors:
+            if ip in locations:
+                avail_executors.append((ip, tid))
+        
+        if len(avail_executors) > 0:
+            chosen_exe = random.choice(avail_executors)
+        else:
+            chosen_exe = random.choice(executors)
+
+        if chosen_exe not in self.running_counts:
+            self.running_counts[chosen_exe] = set()
+
+        self.running_counts[chosen_exe].add(time.time())
+
+        self.unpinned_cpu_executors.discard(chosen_exe)
+
+        return chosen_exe
 
     def pick_executor(self, references, function_name=None, colocated=[],
                       schedule=None):

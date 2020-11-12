@@ -48,14 +48,15 @@ def call_function(func_call_socket, pusher_cache, policy):
         # It means the invocation is from storage, 
         # so we parse the arguments in a different way
         # TODO remove loc from the original call
-        result = policy.pick_executor_with_loc(call.locations)
+        loc_set = set(call.locations)
+        result = policy.pick_executor_with_loc(call.name, loc_set)
 
         if result is None:
             logging.error('No executor available for STORAGE CALL')
             return
 
         ip, tid = result
-        logging.info('Pick executor %s:%d for STORAGE CALL' % (ip, tid))
+        logging.info('Pick executor %s:%d for STORAGE CALL %s with locations %s' % (ip, tid, call.name, loc_set))
 
         sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
         sckt.send(call.SerializeToString())
