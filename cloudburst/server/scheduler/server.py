@@ -161,7 +161,6 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                                            kvs, ip, policy_type, local=local)
     policy.update()
 
-    # has_ephe = ('STORAGE_OR_DEFAULT' in os.environ and os.environ['STORAGE_OR_DEFAULT'] == '0')
     start = time.time()
 
     while True:
