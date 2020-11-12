@@ -25,10 +25,10 @@ rm -rf cloudburst/shared/proto
 mkdir cloudburst/shared/proto
 touch cloudburst/shared/proto/__init__.py
 # override the original cloudburst proto using new one to support STORAGE CALL
-mv proto/cloudburst.proto common/proto
-protoc -I=common/proto --python_out=cloudburst/shared/proto cloudburst.proto shared.proto
+# mv proto/cloudburst.proto common/proto
+# protoc -I=common/proto --python_out=cloudburst/shared/proto cloudburst.proto shared.proto
 protoc -I=common/proto --python_out=cloudburst/shared/proto anna.proto shared.proto causal.proto
-protoc -I=proto --python_out=cloudburst/shared/proto internal.proto
+protoc -I=proto --python_out=cloudburst/shared/proto internal.proto cloudburst.proto
 
 # NOTE: This is a hack. We have to do this because the protobufs are not
 # packaged properly (in the protobuf definitions). This isn't an issue for C++
