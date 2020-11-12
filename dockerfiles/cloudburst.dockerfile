@@ -31,9 +31,6 @@ RUN pip3 install -r requirements.txt
 WORKDIR $HYDRO_HOME
 RUN rm -rf anna
 RUN git clone --recurse-submodules https://github.com/hydro-project/anna
-WORKDIR anna
-RUN cd client/python && python3.6 setup.py install
-WORKDIR /
 
 # Install Trigger KVS client
 ENV EPHE_HOME /ephe-store

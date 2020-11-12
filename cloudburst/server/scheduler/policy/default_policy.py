@@ -95,7 +95,9 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
 
         # Indicates if we are running in local mode
         self.local = local
-
+    
+    def pick_executor_with_loc(self, locations):
+        pass
 
     def pick_executor(self, references, function_name=None, colocated=[],
                       schedule=None):

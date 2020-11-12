@@ -47,9 +47,8 @@ def call_function(func_call_socket, pusher_cache, policy):
     if call.source_hint == STORAGE:
         # It means the invocation is from storage, 
         # so we parse the arguments in a different way
-        # TODO get a locations and create the real call
-        locations = call.locations
-        result = policy.pick_executor([])
+        # TODO remove loc from the original call
+        result = policy.pick_executor_with_loc(call.locations)
 
         if result is None:
             logging.error('No executor available for STORAGE CALL')

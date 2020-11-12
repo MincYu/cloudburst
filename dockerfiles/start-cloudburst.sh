@@ -29,6 +29,15 @@ gen_yml_list() {
   echo -e "$RESULT"
 }
 
+cd $HYDRO_HOME/anna
+
+# override the original cloudburst proto using new one to support STORAGE CALL
+rm common/proto/cloudburst.proto
+cp $HYDRO_HOME/cloudburst/proto/cloudburst.proto common/proto
+
+cd client/python
+python3.6 setup.py install
+
 cd $HYDRO_HOME/cloudburst
 
 # Compile protobufs and run other installation procedures before starting.
