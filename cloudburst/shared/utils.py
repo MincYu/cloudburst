@@ -32,3 +32,5 @@ DAG_CALL_PORT = 5005
 
 # The port on which DAG deletion requests are made.
 DAG_DELETE_PORT = 5006
+
+FUNC_CALL_QUEUE_ PORT = 5007

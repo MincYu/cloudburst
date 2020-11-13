@@ -13,17 +13,17 @@ import os
 from cloudburst.server.benchmarks import utils
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-if len(sys.argv) < 4:
-    print('Usage: ./ephe_test.py {f_elb} {bucket_name} {size} {optional:timeout}')
+if len(sys.argv) < 3:
+    print('Usage: ./ephe_test.py {bucket_name} {size} {optional:timeout}')
     exit(1)
 
 timeout = 10
-f_elb = sys.argv[1]
-bucket_name = sys.argv[2]
-OSIZE = int(sys.argv[3])
-if len(sys.argv) > 4:
-    timeout = int(sys.argv[4])
+bucket_name = sys.argv[1]
+OSIZE = int(sys.argv[2])
+if len(sys.argv) > 3:
+    timeout = int(sys.argv[3])
 
+f_elb = 'a62eeb33f6b3b43779ea9c09796b7c2e-1388118431.us-east-1.elb.amazonaws.com'
 my_ip = '18.212.101.17'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
@@ -43,7 +43,7 @@ def write_test(cloudburst, name, size):
     logging.info('Start writing')
     cloudburst.put('start', start_put, durable=True)
 
-    cloudburst.put((name, 'v2', None), new_v, init_session=True, durable=False)
+    cloudburst.put((name, 'v0', None), new_v, init_session=True, durable=False)
 
 def read_test(cloudburst, data):
     logging.info('received data {}'.format(data))
@@ -57,8 +57,8 @@ def read_test(cloudburst, data):
     cloudburst.put('end', end, durable=True)
 
 
-write_func = cloudburst_client.register(write_test, 'write_11')
-read_func = cloudburst_client.register(read_test, 'read_11')
+write_func = cloudburst_client.register(write_test, 'write_6')
+read_func = cloudburst_client.register(read_test, 'read_6')
 
 write_func(bucket_name, OSIZE)
 

@@ -44,6 +44,39 @@ def call_function(func_call_socket, pusher_cache, policy):
 
     # Filter the arguments for CloudburstReferences, and use the policy engine to
     # pick a node for this request.
+    refs = list(filter(lambda arg: type(arg) == CloudburstReference,
+                    map(lambda arg: serializer.load(arg),
+                        call.arguments.values)))
+    result = policy.pick_executor(refs)
+
+    response = GenericResponse()
+    if result is None:
+        response.success = False
+        response.error = NO_RESOURCES
+        func_call_socket.send(response.SerializeToString())
+        return
+
+    # Forward the request on to the chosen executor node.
+    ip, tid = result
+    # logging.info('Pick executor %s:%d for %s' % (ip, tid, call.name))
+
+    sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
+    sckt.send(call.SerializeToString())
+
+    # Send a success response to the user with the response key.
+    response.success = True
+    response.response_id = call.response_key
+    func_call_socket.send(response.SerializeToString())
+
+def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
+    call = FunctionCall()
+    call.ParseFromString(func_call_queue_socket.recv())
+
+    # If there is no response key set for this request, we generate a random
+    # UUID.
+    if not call.response_key:
+        call.response_key = str(uuid.uuid4())
+
     if call.source_hint == STORAGE:
         # It means the invocation is from storage, 
         # so we parse the arguments in a different way
@@ -60,32 +93,6 @@ def call_function(func_call_socket, pusher_cache, policy):
 
         sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
         sckt.send(call.SerializeToString())
-    else:
-        # From normal cloudburst client
-        refs = list(filter(lambda arg: type(arg) == CloudburstReference,
-                        map(lambda arg: serializer.load(arg),
-                            call.arguments.values)))
-        result = policy.pick_executor(refs)
-
-        response = GenericResponse()
-        if result is None:
-            response.success = False
-            response.error = NO_RESOURCES
-            func_call_socket.send(response.SerializeToString())
-            return
-
-        # Forward the request on to the chosen executor node.
-        ip, tid = result
-        logging.info('Pick executor %s:%d for CLIENT CALL %s' % (ip, tid, call.name))
-
-        sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
-        sckt.send(call.SerializeToString())
-
-        # Send a success response to the user with the response key.
-        response.success = True
-        response.response_id = call.response_key
-        func_call_socket.send(response.SerializeToString())
-
 
 def call_dag(call, pusher_cache, dags, policy, request_id=None):
     dag, sources = dags[call.name]

@@ -55,6 +55,7 @@ from cloudburst.shared.utils import (
     DAG_CREATE_PORT,
     DAG_DELETE_PORT,
     FUNC_CALL_PORT,
+    FUNC_CALL_QUEUE_PORT,
     FUNC_CREATE_PORT,
     LIST_PORT
 )
@@ -104,6 +105,11 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
     func_call_socket = context.socket(zmq.REP)
     func_call_socket.bind(sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_PORT))
 
+    # This is for handle the invocation from queue
+    # Mainly for storage event
+    func_call_queue_socket = context.socket(zmq.PULL)
+    func_call_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_QUEUE_PORT))
+
     dag_create_socket = context.socket(zmq.REP)
     dag_create_socket.bind(sutils.BIND_ADDR_TEMPLATE % (DAG_CREATE_PORT))
 
@@ -148,6 +154,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
     poller.register(connect_socket, zmq.POLLIN)
     poller.register(func_create_socket, zmq.POLLIN)
     poller.register(func_call_socket, zmq.POLLIN)
+    poller.register(func_call_queue_socket, zmq.POLLIN)
     poller.register(dag_create_socket, zmq.POLLIN)
     poller.register(dag_call_socket, zmq.POLLIN)
     poller.register(dag_delete_socket, zmq.POLLIN)
@@ -176,6 +183,9 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
 
         if func_call_socket in socks and socks[func_call_socket] == zmq.POLLIN:
             call_function(func_call_socket, pusher_cache, policy)
+        
+        if func_call_queue_socket in socks and socks[func_call_queue_socket] == zmq.POLLIN:
+            call_function_from_queue(func_call_queue_socket, pusher_cache, policy)
 
         if (dag_create_socket in socks and socks[dag_create_socket]
                 == zmq.POLLIN):

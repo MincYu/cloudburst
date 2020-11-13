@@ -61,7 +61,7 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_eph
 
         # We set the session as the response key from scheduler
         # It should be uuid and identical
-        if not has_ephe:
+        if has_ephe:
             user_library.session = call.response_key
         try:
             if call.consistency == NORMAL:
