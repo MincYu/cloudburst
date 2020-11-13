@@ -21,22 +21,32 @@ timeout = 10
 f_elb = sys.argv[1]
 bucket_name = sys.argv[2]
 OSIZE = int(sys.argv[3])
-if len(sys.argv >= 4):
+if len(sys.argv) > 4:
     timeout = int(sys.argv[4])
 
 my_ip = '18.212.101.17'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
+# print(cloudburst_client.get('test'))
+# exit(0)
+
+# def test(cloudburst):
+#     cloudburst.put('test', 'new', durable=True)
+# test_func = cloudburst_client.register(test, 'test0')
+# test_func()
+# exit(0)
+
 def write_test(cloudburst, name, size):    
     new_v = np.random.random(size)
     start_put = time.time()
+    logging.info('Start writing')
     cloudburst.put('start', start_put, durable=True)
 
-    cloudburst.put((name, 'v1', None), new_v, init_session=True, durable=False)
+    cloudburst.put((name, 'v2', None), new_v, init_session=True, durable=False)
 
 def read_test(cloudburst, data):
-    print('received data {}'.format(data))
+    logging.info('received data {}'.format(data))
 
     for d in data:
         if len(d) == 3:
@@ -47,8 +57,8 @@ def read_test(cloudburst, data):
     cloudburst.put('end', end, durable=True)
 
 
-write_func = cloudburst_client.register(write_test, 'write')
-read_func = cloudburst_client.register(read_test, 'read')
+write_func = cloudburst_client.register(write_test, 'write_11')
+read_func = cloudburst_client.register(read_test, 'read_11')
 
 write_func(bucket_name, OSIZE)
 
