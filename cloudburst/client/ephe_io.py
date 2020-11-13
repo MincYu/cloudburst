@@ -14,7 +14,7 @@ from cloudburst.server.benchmarks import utils
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 if len(sys.argv) < 3:
-    print('Usage: ./ephe_test.py {bucket_name} {size} {optional:timeout}')
+    print('Usage: ./ephe_io.py {bucket_name} {size} {optional:timeout}')
     exit(1)
 
 timeout = 10
