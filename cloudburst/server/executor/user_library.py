@@ -91,9 +91,9 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
     def get_ephe(self, bucket_key):
         if type(bucket_key) == list:
-            return [self.client.get(b_k_s[0], b_k_s[1], session=b_k_s[2]) for b_k_s in bucket_key]
+            return [self.ephe_client.get(b_k_s[0], b_k_s[1], session=b_k_s[2]) for b_k_s in bucket_key]
         else:
-            return self.client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
+            return self.ephe_client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
 
     def put_anna(self, ref, value):
         return self.anna_client.put(ref, serializer.dump_lattice(value))
