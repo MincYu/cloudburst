@@ -24,7 +24,7 @@ from anna.client import AnnaTcpClient
 from anna.zmq_util import SocketCache
 import requests
 
-from cloudburst.server.scheduler.call import call_dag, call_function
+from cloudburst.server.scheduler.call import call_dag, call_function, call_function_from_queue
 from cloudburst.server.scheduler.create import (
     create_dag,
     create_function,

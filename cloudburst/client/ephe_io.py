@@ -23,7 +23,7 @@ OSIZE = int(sys.argv[2])
 if len(sys.argv) > 3:
     timeout = int(sys.argv[3])
 
-f_elb = 'a62eeb33f6b3b43779ea9c09796b7c2e-1388118431.us-east-1.elb.amazonaws.com'
+f_elb = 'a151d14dc968e42dfbf3b4de5439972c-1911842656.us-east-1.elb.amazonaws.com'
 my_ip = '18.212.101.17'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
@@ -37,13 +37,14 @@ cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 # test_func()
 # exit(0)
 
-def write_test(cloudburst, name, size):    
+def write_test(cloudburst, name, key, size):    
     new_v = np.random.random(size)
+    init_sess = True if 'session' in name else False
     start_put = time.time()
     logging.info('Start writing')
     cloudburst.put('start', start_put, durable=True)
 
-    cloudburst.put((name, 'v0', None), new_v, init_session=True, durable=False)
+    cloudburst.put((name, key, None), new_v, init_session=init_sess, durable=False)
 
 def read_test(cloudburst, data):
     logging.info('received data {}'.format(data))
@@ -57,10 +58,10 @@ def read_test(cloudburst, data):
     cloudburst.put('end', end, durable=True)
 
 
-write_func = cloudburst_client.register(write_test, 'write_6')
-read_func = cloudburst_client.register(read_test, 'read_6')
+write_func = cloudburst_client.register(write_test, 'write_2')
+read_func = cloudburst_client.register(read_test, 'read_2')
 
-write_func(bucket_name, OSIZE)
+write_func(bucket_name, 'v2', OSIZE)
 
 print('Retriving results')
 retri_start = time.time()

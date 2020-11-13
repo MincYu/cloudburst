@@ -1,7 +1,5 @@
 from cloudburst.client.client import CloudburstConnection
-from cloudburst.shared.serializer import Serializer
 
-import logging
 import random
 import sys
 import time
@@ -10,18 +8,6 @@ import cloudpickle as cp
 import numpy as np
 import os
 
-from cloudburst.server.benchmarks import utils
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
-if len(sys.argv) < 3:
-    print('Usage: ./ephe_io_test.py {bucket_name} {size} {optional:timeout}')
-    exit(1)
-
-timeout = 10
-bucket_name = sys.argv[1]
-OSIZE = int(sys.argv[2])
-if len(sys.argv) > 3:
-    timeout = int(sys.argv[3])
 
 f_elb = 'a62eeb33f6b3b43779ea9c09796b7c2e-1388118431.us-east-1.elb.amazonaws.com'
 my_ip = '18.212.101.17'
@@ -36,6 +22,19 @@ cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 # test_func = cloudburst_client.register(test, 'test0')
 # test_func()
 # exit(0)
+
+def preprocess(cloudburst, inp):
+    from skimage import filters
+    preprocessed = filters.gaussian(inp).reshape(1, 3, 224, 224)
+    cloudburst.put(('pipeline', 'img', None), preprocessed, init_session=True, durable=False)
+
+def sqnet(cloudburst, keys):
+    import torch
+    import torchvision
+
+    for 
+    model = torchvision.models.squeezenet1_1()
+    result = model(torch.tensor(inp.astype(np.float32))).detach().numpy()
 
 def write_test(cloudburst, name, size):    
     new_v = np.random.random(size)
