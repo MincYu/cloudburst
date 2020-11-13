@@ -12,6 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+FUNC_CALL_QUEUE_PORT = 4999
+
 # The port on which clients can connect to the Cloudburst service.
 CONNECT_PORT = 5000
 
@@ -32,5 +34,3 @@ DAG_CALL_PORT = 5005
 
 # The port on which DAG deletion requests are made.
 DAG_DELETE_PORT = 5006
-
-FUNC_CALL_QUEUE_PORT = 5007
