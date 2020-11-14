@@ -67,15 +67,15 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
     def put(self, ref, value, init_session=False, durable=True):
         if durable or not self.has_ephe:
-            self.put_anna(ref, value)
+            return self.put_anna(ref, value)
         else:
-            self.put_ephe(ref, value, init_session=init_session)
+            return self.put_ephe(ref, value, init_session=init_session)
 
     def get(self, ref, deserialize=True, durable=True):
         if durable or not self.has_ephe:
-            self.get_anna(ref, deserialize=deserialize)
+            return self.get_anna(ref, deserialize=deserialize)
         else:
-            self.get_ephe(ref)
+            return self.get_ephe(ref)
 
     def put_ephe(self, bucket_key, value, init_session=False):
         # ref should be (bucket, key, session) tuple if it is a bucket key, otherwise it is a list
