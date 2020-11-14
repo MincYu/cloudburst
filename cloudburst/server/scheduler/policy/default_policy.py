@@ -101,7 +101,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
         # Check if available executors have local data
         # Otherwise pick randomly
 
-        executors = set(self.unpinned_cpu_executors)
+        executors = list(self.unpinned_cpu_executors)
         chosen_exe = None
 
         if len(executors) == 0:

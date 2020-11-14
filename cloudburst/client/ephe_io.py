@@ -23,8 +23,8 @@ OSIZE = int(sys.argv[2])
 if len(sys.argv) > 3:
     timeout = int(sys.argv[3])
 
-f_elb = 'a688b117387b040b19ab7071874fd6c9-1722544826.us-east-1.elb.amazonaws.com'
-my_ip = '3.85.213.80'
+f_elb = 'a79d0cbd8b0f144ef97754004ff1c303-1599878238.us-east-1.elb.amazonaws.com'
+my_ip = '18.209.67.116'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
@@ -58,10 +58,10 @@ def read_test(cloudburst, *data):
     cloudburst.put('end_' + key_n, end, durable=True)
 
 
-write_func = cloudburst_client.register(write_test, 'write_0')
+write_func = cloudburst_client.register(write_test, 'write_1')
 read_func = cloudburst_client.register(read_test, 'trigger_upon_write')
 
-key_n = 'k0'
+key_n = 'k3'
 write_func(bucket_name, key_n, OSIZE)
 
 print('Retriving results')

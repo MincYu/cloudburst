@@ -8,58 +8,87 @@ import cloudpickle as cp
 import numpy as np
 import os
 
-
-f_elb = 'a62eeb33f6b3b43779ea9c09796b7c2e-1388118431.us-east-1.elb.amazonaws.com'
-my_ip = '18.212.101.17'
+f_elb = 'a80bcca2e05cb4022b0dba4cb54581d0-1701214262.us-east-1.elb.amazonaws.com'
+my_ip = '18.209.67.116'
+timeout = 10
+key_n = 'image9'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
-# print(cloudburst_client.get('test'))
+# from skimage import filters
+# inp = cloudburst_client.get(key_n)
+# preprocessed = filters.gaussian(inp).reshape(1, 3, 224, 224)
 # exit(0)
 
-# def test(cloudburst):
-#     cloudburst.put('test', 'new', durable=True)
-# test_func = cloudburst_client.register(test, 'test0')
-# test_func()
+# def test(cloudburst, key):
+#     v = np.random.random(100)
+#     cloudburst.put(key, v, durable=True)
+    
+#     read_v = cloudburst.get(key, durable=True)
+#     logging.info(read_v.size)
+# test_func = cloudburst_client.register(test, 'tst_100')
+# test_func('tst_100')
+# print(cloudburst_client.get('tst_100').size)
 # exit(0)
 
-def preprocess(cloudburst, inp):
+def preprocess(cloudburst, key):
     from skimage import filters
+    start = time.time()
+    cloudburst.put('start_' + key, start, durable=True)
+    inp =  np.random.randn(1, 224, 224, 3)
+    # inp = cloudburst.get(key, durable=True)
+    # logging.info(f'key: {key}, inp type: {type(inp)}')
     preprocessed = filters.gaussian(inp).reshape(1, 3, 224, 224)
-    cloudburst.put(('pipeline', 'img', None), preprocessed, init_session=True, durable=False)
+    cloudburst.put(('pre', key, None), preprocessed, init_session=True, durable=False)
 
-def sqnet(cloudburst, keys):
-    import torch
-    import torchvision
+def sqnet_1(cloudburst, *data):
+    # import torch
+    # import torchvision
 
-    for 
-    model = torchvision.models.squeezenet1_1()
-    result = model(torch.tensor(inp.astype(np.float32))).detach().numpy()
+    if len(data) >= 3:
+        bucket, key, session = data[0], data[1], data[2]
+        inp = cloudburst.get((bucket, key, session), durable=False)
 
-def write_test(cloudburst, name, size):    
-    new_v = np.random.random(size)
-    start_put = time.time()
-    logging.info('Start writing')
-    cloudburst.put('start', start_put, durable=True)
+        # model = torchvision.models.squeezenet1_1()
+        # res = model(torch.tensor(inp.astype(np.float32))).detach().numpy()
+        res = np.random.randn(1000)
+        cloudburst.put(('result', key + '_1', session), res, durable=False)
 
-    cloudburst.put((name, 'v0', None), new_v, init_session=True, durable=False)
+def sqnet_2(cloudburst, *data):
+    # import torch
+    # import torchvision
 
-def read_test(cloudburst, data):
-    logging.info('received data {}'.format(data))
+    if len(data) >= 3:
+        bucket, key, session = data[0], data[1], data[2]
+        inp = cloudburst.get((bucket, key, session), durable=False)
 
-    for d in data:
-        if len(d) == 3:
-            bucket, key, session = d
-            v = cloudburst.get((bucket, key, session), durable=False)
+        # model = torchvision.models.squeezenet1_1()
+        # res = model(torch.tensor(inp.astype(np.float32))).detach().numpy()
+        res = np.random.randn(1000)
+        cloudburst.put(('result', key + '_2', session), res, durable=False)
+
+def average(cloudburst, *data):
+    import numpy as np
+    inps = []
+    key_n = ""
+    for bucket, key, session in zip(data[0::3], data[1::3], data[2::3]):
+        inp = cloudburst.get((bucket, key, session), durable=False)
+        inps.append(inp)
+        key_n = key.split('_')[0]
 
     end = time.time()
-    cloudburst.put('end', end, durable=True)
+    cloudburst.put('end_' + key_n, end, durable=True)
 
+pre_func = cloudburst_client.register(preprocess, 'pre')
+m1_func = cloudburst_client.register(sqnet_1, 'm1')
+m2_func = cloudburst_client.register(sqnet_2, 'm2')
+avg_func = cloudburst_client.register(average, 'avg')
 
-write_func = cloudburst_client.register(write_test, 'write_6')
-read_func = cloudburst_client.register(read_test, 'read_6')
+# arr = np.random.randn(1, 224, 224, 3)
+# cloudburst_client.put_object(key_n, arr)
+# print(key_n + ' is put')
 
-write_func(bucket_name, OSIZE)
+pre_func(key_n)
 
 print('Retriving results')
 retri_start = time.time()
@@ -68,9 +97,10 @@ while True:
         print('Retriving timeout.')
         break
     
-    end = cloudburst_client.get('end')
+    end = cloudburst_client.get('end_' + key_n)
     if end:
-        start = cloudburst_client.get('start')
+        start = cloudburst_client.get('start_' + key_n)
         elasped = end - start
         print('Retrived results: elasped {}'.format(elasped))
+        break
 

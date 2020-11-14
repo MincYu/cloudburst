@@ -58,7 +58,7 @@ def call_function(func_call_socket, pusher_cache, policy):
 
     # Forward the request on to the chosen executor node.
     ip, tid = result
-    # logging.info('Pick executor %s:%d for %s' % (ip, tid, call.name))
+    logging.info('Pick executor %s:%d for CLIENT CALL %s' % (ip, tid, call.name))
 
     sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
     sckt.send(call.SerializeToString())
