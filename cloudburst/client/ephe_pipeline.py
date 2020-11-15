@@ -8,10 +8,10 @@ import cloudpickle as cp
 import numpy as np
 import os
 
-f_elb = 'a96465165c86b4c4b98afd4fbc759e9a-1572993111.us-east-1.elb.amazonaws.com'
-my_ip = '18.209.67.116'
+f_elb = 'a9505900455b4485493d70e1200d7117-1477393795.us-east-1.elb.amazonaws.com'
+my_ip = '54.196.208.3'
 timeout = 10
-key_n = 'image9'
+key_n = 'image'
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
 
@@ -86,9 +86,13 @@ arr = np.random.randn(1, 224, 224, 3)
 cloudburst_client.put_object(key_n, arr)
 print(key_n + ' is put')
 
-session = pre_func(key_n)
+# inp = cloudburst_client.get(key_n)
+# print(inp.size)
+# exit(0)
 
-print('Retriving results')
+session = cloudburst_client.exec_func('pre', [key_n])
+
+print(f'Retriving results {session}')
 retri_start = time.time()
 while True:
     if time.time() - retri_start > timeout:
@@ -101,4 +105,20 @@ while True:
         elasped = end - start
         print('Retrived results: elasped {}'.format(elasped))
         break
+    time.sleep(1)
 
+"""
+Create bucket and add triggers for coordination.
+
+coord_addr = ''
+client = CoordClient(coord_addr, None)
+
+client.create_bucket('pre', SESSION)
+client.create_bucket('result', SESSION)
+
+client.add_trigger('pre', 't1', UPON_WRITE, {'function': 'm1'})
+client.add_trigger('pre', 't2', UPON_WRITE, {'function': 'm2'})
+
+client.add_trigger('result', 't3', BY_SET, {'function': 'avg', 'key_set': ['re_1', 're_2']})
+
+"""

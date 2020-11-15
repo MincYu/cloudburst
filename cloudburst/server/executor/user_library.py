@@ -62,7 +62,7 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
         self.has_ephe = has_ephe
         if has_ephe:
-            self.ephe_client = KVSClient(thread_id=0, context=context)
+            self.ephe_client = KVSClient(thread_id=tid, context=context)
             self.session = None
 
     def put(self, ref, value, init_session=False, durable=True):
