@@ -1,33 +1,27 @@
-from cloudburst.client.client import CloudburstConnection
+from cloudburst.client.ephe_common import *
 
-import random
-import sys
-import time
-import uuid
-import cloudpickle as cp
-import numpy as np
-import os
+def dag_preprocess(cloudburst, key):
+    from skimage import filters
+    start = time.time()
+    cloudburst.put('start_', start, durable=True)
+    inp = cloudburst.get(key, durable=True)
+    return filters.gaussian(inp).reshape(1, 3, 224, 224)
 
-f_elb = 'a9505900455b4485493d70e1200d7117-1477393795.us-east-1.elb.amazonaws.com'
-my_ip = '54.196.208.3'
-timeout = 10
-key_n = 'image'
+def dag_sqnet(cloudburst, inp):
+    import torch
+    import torchvision
 
-cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
+    model = torchvision.models.squeezenet1_1()
+    return model(torch.tensor(inp.astype(np.float32))).detach().numpy()
 
-# def test(cloudburst):
-#     import torch
-#     import torchvision
+def dag_average(cloudburst, inp1, inp2):
+    import numpy as np
+    inp = [inp1, inp2]
+    res = np.mean(inp, axis=0)
 
-#     inp =  np.random.randn(1, 3, 224, 224)
-#     model = torchvision.models.squeezenet1_1()
-#     res = model(torch.tensor(inp.astype(np.float32))).detach().numpy()
-#     cloudburst.put('res', res, durable=True)
-#     return res.size
-
-# test_func = cloudburst_client.register(test, 'tst_123')
-# print(test_func().get())
-# exit(0)
+    end = time.time()
+    cloudburst.put('end_', end, durable=True)
+    return res
 
 def preprocess(cloudburst, key):
     from skimage import filters
@@ -71,41 +65,70 @@ def average(cloudburst, *data):
     for bucket, key, session in zip(data[0::3], data[1::3], data[2::3]):
         inp = cloudburst.get((bucket, key, session), durable=False)
         inps.append(inp)
-        key_n = key.split('_')[0]
+
+    res = np.mean(inps, axis=0)
 
     if session:
         end = time.time()
         cloudburst.put('end_' + session, end, durable=True)
 
-pre_func = cloudburst_client.register(preprocess, 'pre')
-m1_func = cloudburst_client.register(sqnet_1, 'm1')
-m2_func = cloudburst_client.register(sqnet_2, 'm2')
-avg_func = cloudburst_client.register(average, 'avg')
+test_ephe = True
 
+key_n = 'image'
 arr = np.random.randn(1, 224, 224, 3)
 cloudburst_client.put_object(key_n, arr)
-print(key_n + ' is put')
 
-# inp = cloudburst_client.get(key_n)
-# print(inp.size)
-# exit(0)
+if test_ephe:
+    pre_func = cloudburst_client.register(preprocess, 'pre')
+    m1_func = cloudburst_client.register(sqnet_1, 'm1')
+    m2_func = cloudburst_client.register(sqnet_2, 'm2')
+    avg_func = cloudburst_client.register(average, 'avg')
 
-session = cloudburst_client.exec_func('pre', [key_n])
+    elasped_list = []
+    for _ in range(10):
+        session = cloudburst_client.exec_func('pre', [key_n])
 
-print(f'Retriving results {session}')
-retri_start = time.time()
-while True:
-    if time.time() - retri_start > timeout:
-        print('Retriving timeout.')
-        break
+        # print(f'Retriving results {session}')
+        retri_start = time.time()
+        while True:
+            if time.time() - retri_start > timeout:
+                print('Retriving timeout.')
+                break
+            
+            end = cloudburst_client.get('end_' + session)
+            if end:
+                start = cloudburst_client.get('start_' + key_n)
+                elasped = end - start
+                elasped_list.append(elasped)
+                # print('Retrived results: elasped {}'.format(elasped))
+                break
+    print('ephe results. elasped {}'.format(elasped_list))
+        
+else:
+    cloud_prep = cloudburst_client.register(dag_preprocess, 'preprocess')
+    cloud_sqnet1 = cloudburst_client.register(dag_sqnet, 'sqnet1')
+    cloud_sqnet2 = cloudburst_client.register(dag_sqnet, 'sqnet2')
+    cloud_average = cloudburst_client.register(dag_average, 'average')
+
+    dag_name = 'dag_pipeline'
+
+    functions = ['preprocess', 'sqnet1', 'sqnet2', 'average']
+    connections = [('preprocess', 'sqnet1'), ('preprocess', 'sqnet2'),
+                ('sqnet1', 'average'), ('sqnet2', 'average')]
+    success, error = cloudburst_client.register_dag(dag_name, functions, connections)
     
-    end = cloudburst_client.get('end_' + session)
-    if end:
-        start = cloudburst_client.get('start_' + key_n)
-        elasped = end - start
-        print('Retrived results: elasped {}'.format(elasped))
-        break
-    time.sleep(1)
+    arg_map = {'preprocess': [key_n]}
+
+    elasped_list = []
+    cloudburst_client.call_dag(dag_name, arg_map, True)
+    for _ in range(10):
+        cloudburst_client.call_dag(dag_name, arg_map, True)
+        start = cloudburst_client.get('start_')
+        end = cloudburst_client.get('end_')
+        elasped_list.append(end - start)
+    
+    print('dag results: elasped {}'.format(elasped_list))
+    suc, err = cloudburst_client.delete_dag(dag_name)
 
 """
 Create bucket and add triggers for coordination.
