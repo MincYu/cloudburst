@@ -71,3 +71,12 @@ else:
     print('dag results: elasped {}'.format(elasped_list))
     suc, err = cloudburst_client.delete_dag(dag_name)
 
+"""
+Create bucket and add triggers for coordination.
+
+coord_addr = ''
+client = CoordClient(coord_addr, None)
+client.create_bucket('incr', NORMAL)
+client.add_trigger('incr', 't1', UPON_WRITE, {'function': 'ephe_square'})
+
+"""

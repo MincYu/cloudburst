@@ -26,11 +26,11 @@ def dag_average(cloudburst, inp1, inp2):
 def preprocess(cloudburst, key):
     from skimage import filters
     start = time.time()
-    cloudburst.put('start_' + key, start, durable=True)
+    cloudburst.put('start', start, use_session=True, durable=True)
     # inp =  np.random.randn(1, 224, 224, 3)
     inp = cloudburst.get(key, durable=True)
     preprocessed = filters.gaussian(inp).reshape(1, 3, 224, 224)
-    cloudburst.put(('pre', key, None), preprocessed, init_session=True, durable=False)
+    cloudburst.put(('pre', key, None), preprocessed, use_session=True, durable=False)
 
 def sqnet_1(cloudburst, *data):
     import torch
@@ -97,7 +97,7 @@ if test_ephe:
             
             end = cloudburst_client.get('end_' + session)
             if end:
-                start = cloudburst_client.get('start_' + key_n)
+                start = cloudburst_client.get('start_' + session)
                 elasped = end - start
                 elasped_list.append(elasped)
                 # print('Retrived results: elasped {}'.format(elasped))

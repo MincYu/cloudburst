@@ -16,7 +16,7 @@ def ephe_write(cloudburst, name, key, size):
     init_sess = True if 'session' in name else False
 
     start_1 = time.time()
-    cloudburst.put((name, key, None), new_v, init_session=init_sess, durable=False)
+    cloudburst.put((name, key, None), new_v, use_session=init_sess, durable=False)
     start_2 = time.time()
 
     cloudburst.put('start_1_' + key, start_1, durable=True)

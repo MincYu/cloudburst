@@ -65,11 +65,11 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
             self.ephe_client = KVSClient(thread_id=tid, context=context)
             self.session = None
 
-    def put(self, ref, value, init_session=False, durable=True):
+    def put(self, ref, value, use_session=False, durable=True):
         if durable or not self.has_ephe:
-            return self.put_anna(ref, value)
+            return self.put_anna(ref, value, use_session=use_session)
         else:
-            return self.put_ephe(ref, value, init_session=init_session)
+            return self.put_ephe(ref, value, use_session=use_session)
 
     def get(self, ref, deserialize=True, durable=True):
         if durable or not self.has_ephe:
@@ -77,16 +77,16 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         else:
             return self.get_ephe(ref)
 
-    def put_ephe(self, bucket_key, value, init_session=False):
+    def put_ephe(self, bucket_key, value, use_session=False):
         # ref should be (bucket, key, session) tuple if it is a bucket key, otherwise it is a list
         if type(bucket_key) == list and type(value) == list:
             results = []
             for b_k_s, v in zip(bucket_key, value):
-                cur_session = self.session if init_session else b_k_s[2]
+                cur_session = self.session if use_session else b_k_s[2]
                 results.append(self.ephe_client.put(b_k_s[0], b_k_s[1], v, session=cur_session))
             return results
         else:
-            cur_session = self.session if init_session else bucket_key[2]
+            cur_session = self.session if use_session else bucket_key[2]
             return self.ephe_client.put(bucket_key[0], bucket_key[1], value, session=cur_session)
 
     def get_ephe(self, bucket_key):
@@ -95,7 +95,12 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         else:
             return self.ephe_client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
 
-    def put_anna(self, ref, value):
+    def put_anna(self, ref, value, use_session=False):
+        if use_session:
+            if type(ref) == list:
+                ref = ['{}_{}'.format(r, self.session) for r in ref]
+            else:
+                ref = '{}_{}'.format(ref, self.session)
         return self.anna_client.put(ref, serializer.dump_lattice(value))
 
     def get_anna(self, ref, deserialize=True):
