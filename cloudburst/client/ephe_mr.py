@@ -25,7 +25,7 @@ def gen_sort_data(num, mapper_num, reducer_num, sample_num):
 re_gen = False
 mapper_num = reducer_num = 4
 
-if re_gen or cloudburst_client.get('in_1') is None:
+if re_gen or cloudburst_client.get('split') is None:
     print('Gen data...')
     start = time.time()
     samples = gen_sort_data(1000000 * 128, mapper_num, reducer_num, 10000)
@@ -155,14 +155,13 @@ def ephe_reduce(cloudburst, *data):
 
     cloudburst.put('ephe_reduce_clock_{}'.format(reduce_id), [reduce_start_clock, *reduce_get_clocks, reduce_sort_clock, reduce_put_clock])
 
-
 def get_runtime_info():
-    m_res = {}
+    m_res = []
     for i in range(1, mapper_num + 1):
-        m_res[f'mapper{i}'] = cloudburst_client.get(f'map_clock_{i}')
-    r_res = {}
+        m_res.append(cloudburst_client.get(f'map_clock_{i}'))
+    r_res = []
     for i in range(1, reducer_num + 1):
-        r_res[f'reducer{i}'] = cloudburst_client.get(f'reduce_clock_{i}')
+        r_res.append(cloudburst_client.get(f'reduce_clock_{i}'))
     return m_res, r_res
 
 test_ephe = False
@@ -189,20 +188,21 @@ if test_ephe:
     
     retri_start = time.time()
     while True:
-        
-        end_1 = cloudburst_client.get('ephe_reduce_clock_1')
-        end_2 = cloudburst_client.get('ephe_reduce_clock_2')
-        if end_1 and end_2:
-            start_1 = cloudburst_client.get('ephe_map_clock_1')
-            start_2 = cloudburst_client.get('ephe_map_clock_2')
-            if end_1[0] > start_1[0]:
+        ends = []
+        for i in range(1, reducer_num + 1):
+            ends.append(cloudburst_client.get(f'ephe_reduce_clock_{i}'))
+        if all([end is not None for end in ends]):
+            starts = []
+            for i in range(1, mapper_num + 1):
+                starts.append(cloudburst_client.get(f'ephe_map_clock_{i}'))
+            if all([end[0] > start[0] for start, end in zip(starts, ends)]):
                 # the same test, valid
                 break
         time.sleep(1)
 
     print(f'map time: {mtime}')
-    print(f'Mapper clock: {start_1}, {start_2}')
-    print(f'Reducer clock: {end_1}, {end_2}')
+    print(f'Mapper clock: {starts}')
+    print(f'Reducer clock: {ends}')
     suc, err = cloudburst_client.delete_dag('map')
 
 else:
@@ -228,15 +228,18 @@ else:
     cloudburst_client.register_dag('reduce', reduce_names, [])
 
     mstart = time.time()
-    cloudburst_client.call_dag('map', map_args).get()
+    ret_map_ids = cloudburst_client.call_dag('map', map_args).get()
+    print(f'map: {ret_map_ids}')
     mtime = time.time() - mstart
 
     rstart = time.time()
-    cloudburst_client.call_dag('reduce', reduce_args).get()
+    ret_reduce_ids = cloudburst_client.call_dag('reduce', reduce_args).get()
+    print(f'reduce: {ret_reduce_ids}')
     rtime = time.time() - rstart
-
-    m_res, r_res = get_runtime_info()
     print(f'map time: {mtime}, reduce time: {rtime}')
+    
+    time.sleep(2)
+    m_res, r_res = get_runtime_info()
     print(f'Mapper clock: {m_res}')
     print(f'Reducer clock: {r_res}')
 
