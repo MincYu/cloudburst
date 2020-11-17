@@ -1,9 +1,9 @@
 from cloudburst.client.ephe_common import *
 
 def dag_preprocess(cloudburst, key):
-    from skimage import filters
     start = time.time()
     cloudburst.put('start_', start, durable=True)
+    from skimage import filters
     inp = cloudburst.get(key, durable=True)
     return filters.gaussian(inp).reshape(1, 3, 224, 224)
 
@@ -24,9 +24,10 @@ def dag_average(cloudburst, inp1, inp2):
     return res
 
 def preprocess(cloudburst, key):
-    from skimage import filters
     start = time.time()
     cloudburst.put('start', start, use_session=True, durable=True)
+
+    from skimage import filters
     # inp =  np.random.randn(1, 224, 224, 3)
     inp = cloudburst.get(key, durable=True)
     preprocessed = filters.gaussian(inp).reshape(1, 3, 224, 224)
@@ -72,7 +73,7 @@ def average(cloudburst, *data):
         end = time.time()
         cloudburst.put('end_' + session, end, durable=True)
 
-test_ephe = True
+test_ephe = False
 
 key_n = 'image'
 arr = np.random.randn(1, 224, 224, 3)

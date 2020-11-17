@@ -1,32 +1,40 @@
 from cloudburst.client.ephe_common import *
 
+# cloudburst_client.delete_dag('dag_math')
+# exit(0)
+
+# for i in range(10):
+#     print(cloudburst_client.get(f'start_{i}'), cloudburst_client.get(f'end_{i}'))
+# exit(0)
+
 def incr(cloudburst, x):
     start = time.time()
-    cloudburst.put('start_', start, durable=True)
-    return x + 1
+    # cloudburst.put('start_', start, durable=True)
+    return (x + 1, start)
 
-def square(cloudburst, x):
+def square(cloudburst, *data):
+    x, start = data[0], data[1]
     res = x * x
     end = time.time()
+    cloudburst.put('start_', start, durable=True)
     cloudburst.put('end_', end, durable=True)
     return res
 
 def ephe_incr(cloudburst, x):    
     start = time.time()
-    cloudburst.put(f'start_{x}', start, durable=True)
     y = x + 1
-
     cloudburst.put(('incr', str(x), None), y, durable=False)
+    cloudburst.put(f'start_{x}', start, durable=True)
 
 def ephe_square(cloudburst, *data):
     bucket, key, session = data[0], data[1], data[2]
-    v = cloudburst.get((bucket, key, session), durable=False)
+    x = cloudburst.get((bucket, key, session), durable=False)
     res = x * x
     
     end = time.time()
     cloudburst.put(f'end_{key}', end, durable=True)
 
-test_ephe = False
+test_ephe = True
 
 if test_ephe:
     incr_func = cloudburst_client.register(ephe_incr, 'ephe_incr')
@@ -45,8 +53,9 @@ if test_ephe:
             end = cloudburst_client.get(f'end_{i}')
             if end:
                 start = cloudburst_client.get(f'start_{i}')
-                elasped = end - start
-                elasped_list.append(elasped)
+                if start:
+                    elasped = end - start
+                    elasped_list.append(elasped)
                 break
     print('ephe results. elasped {}'.format(elasped_list))
 else:
