@@ -2,19 +2,34 @@ from cloudburst.client.ephe_common import *
 
 
 def start_point(cloudburst):
-    return
+    return 1
 
-def sleep_only(cloudburst):
+def sleep_return(cloudburst, value):
     import time
+    import uuid
     time.sleep(1)
-    return
+    uid = str(uuid.uuid4())
+    return str({uid:1})
 
-def end_point(cloudburst):
-    return 'Done'
+def end_point(cloudburst, *values):
+    return len(values)
 
+
+def start_trigger(cloudburst):
+    cloudburst.put(('start_bucket', '1', None), 1, durable=False)
+
+def sleep_put(cloudburst, *data):
+    import time
+    import uuid
+    time.sleep(1)
+    uid = str(uuid.uuid4())
+    cloudburst.put(('sleep_bucket', uid, None), 1, durable=False)
+
+def end_trigger(cloudburst, *data):
+    cloudburst.put('end_trigger', time.time(), durable=True)
 
 test_ephe = False
-NUM = 100
+NUM = 10
 
 if test_ephe:
     pass
@@ -27,7 +42,7 @@ else:
     sleep_funcs = []
     for i in range(NUM):
         name = f'sleep_{i}'
-        func = cloudburst_client.register(sleep_only, name)
+        func = cloudburst_client.register(sleep_return, name)
         sleep_funcs.append(name)
 
 
@@ -38,7 +53,7 @@ else:
     print(f'Create dag {dag_name} {success} {error}')
 
     elasped_list = []
-    for _ in range(10):
+    for _ in range(2):
         start = time.time()
         cloudburst_client.call_dag(dag_name, {}).get()
         end = time.time()
