@@ -31,6 +31,14 @@ RUN pip3 install -r requirements.txt
 WORKDIR $HYDRO_HOME
 RUN rm -rf anna
 RUN git clone --recurse-submodules https://github.com/hydro-project/anna
+WORKDIR $HYDRO_HOME/anna
+RUN rm common/proto/cloudburst.proto
+RUN cp $HYDRO_HOME/cloudburst/proto/cloudburst.proto common/proto
+WORKDIR $HYDRO_HOME/anna/client/python
+RUN python3.6 setup.py install
+
+WORKDIR $HYDRO_HOME/cloudburst
+RUN ./scripts/build.sh
 WORKDIR /
 
 # Install Trigger KVS client
