@@ -37,7 +37,7 @@ if len(sys.argv) < 3:
     print('Usage: ./two_func.py {test_ephe} {osize}')
     exit(1)
 
-test_ephe = sys.argv[1] == 0
+test_ephe = sys.argv[1] == '0'
 OSIZE = int(sys.argv[2])
 
 if test_ephe:
