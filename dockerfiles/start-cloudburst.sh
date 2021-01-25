@@ -61,10 +61,13 @@ if [[ "$ROLE" = "executor" ]]; then
   echo "    scheduler_ips:" >> conf/cloudburst-config.yml
   echo "$LST" >> conf/cloudburst-config.yml
 
+  echo "Executor Started"
+
   while true; do
     python3.6 cloudburst/server/executor/server.py
 
     if [[ "$?" = "1" ]]; then
+      cat cloudburst/log_executor.txt
       exit 1
     fi
   done
@@ -73,9 +76,12 @@ elif [[ "$ROLE" = "scheduler" ]]; then
   echo "    routing_address: $ROUTE_ADDR" >> conf/cloudburst-config.yml
   echo "    policy: $POLICY" >> conf/cloudburst-config.yml
 
+  echo "Scheduler Started"
+
   while true; do
     python3.6 cloudburst/server/scheduler/server.py
     if [[ "$?" = "1" ]]; then
+      cat cloudburst/log_scheduler.txt
       exit 1
     fi
   done
