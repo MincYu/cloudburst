@@ -70,17 +70,17 @@ if test_ephe:
                 start_2 = cloudburst_client.get('start_2_' + key_n)
                 end_1 = cloudburst_client.get('end_1_' + key_n)
 
-                # elasped_1 = start_2 - start_1
-                # elasped_2 = end_1 - start_2
-                elasped_2 = end_1 - start_1
+                elasped_1 = start_2 - start_1
+                elasped_2 = end_1 - start_2
+                # elasped_2 = end_1 - start_1
                 elasped_3 = end_2 - end_1
 
-                # elasped_list_1.append(elasped_1)
+                elasped_list_1.append(elasped_1)
                 elasped_list_2.append(elasped_2)
                 elasped_list_3.append(elasped_3)
                 break
-    # print('ephe results. elasped {}'.format([elasped_list_1, elasped_list_2, elasped_list_3]))
-    print('ephe results. elasped {}'.format([elasped_list_2, elasped_list_3]))
+    print('ephe results. elasped {}'.format([elasped_list_1, elasped_list_2, elasped_list_3]))
+    # print('ephe results. elasped {}'.format([elasped_list_2, elasped_list_3]))
 else:
     print(f'Test Default with size {OSIZE}')
     write_name = 'dag_write_1'
