@@ -1,7 +1,8 @@
 from cloudburst.client.ephe_common import *
 
 def dag_write(cloudburst, key, size):
-    new_v = np.random.random(size)
+    # new_v = np.random.random(size)
+    new_v = 'a' * size
 
     start_1 = time.time()
     cloudburst.put('start_', start_1, durable=True)
@@ -12,7 +13,8 @@ def dag_read(cloudburst, up_res):
     cloudburst.put('end_', end_1, durable=True)
 
 def ephe_write(cloudburst, name, key, size):    
-    new_v = np.random.random(size)
+    # new_v = np.random.random(size)
+    new_v = 'a' * size
     init_sess = True if 'session' in name else False
 
     start_1 = time.time()
