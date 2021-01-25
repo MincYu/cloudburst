@@ -49,8 +49,12 @@ if test_ephe:
     elasped_list_1 = []
     elasped_list_2 = []
     elasped_list_3 = []
+    # key_pre = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
+    key_pre = 's'
     for i in range(10):
-        key_n = f's1_{i}'
+        # key_n = f'{key_pre}_{i}'
+        key_n = f'two_func'
+        cur_stamp = time.time()
         write_func(bucket_name, key_n, OSIZE)
 
         # print('Retriving results')
@@ -61,7 +65,7 @@ if test_ephe:
                 break
             
             end_2 = cloudburst_client.get('end_2_' + key_n)
-            if end_2:
+            if end_2 and end_2 > cur_stamp:
                 start_1 = cloudburst_client.get('start_1_' + key_n)
                 start_2 = cloudburst_client.get('start_2_' + key_n)
                 end_1 = cloudburst_client.get('end_1_' + key_n)
