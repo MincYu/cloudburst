@@ -31,10 +31,15 @@ def ephe_read(cloudburst, *data):
     cloudburst.put('end_1_' + key, end_1, durable=True)
     cloudburst.put('end_2_' + key, end_2, durable=True)
 
-test_ephe = False
-OSIZE = 1
+if len(sys.argv) < 3:
+    print('Usage: ./two_func.py {test_ephe} {osize}')
+    exit(1)
+
+test_ephe = sys.argv[1] == 0
+OSIZE = int(sys.argv[2])
 
 if test_ephe:
+    print(f'Test Trigger-Cache with size {OSIZE}')
     write_func = cloudburst_client.register(ephe_write, 'write_1')
     read_func = cloudburst_client.register(ephe_read, 'trigger_upon_write')
 
@@ -71,6 +76,7 @@ if test_ephe:
     # print('ephe results. elasped {}'.format([elasped_list_1, elasped_list_2, elasped_list_3]))
     print('ephe results. elasped {}'.format([elasped_list_2, elasped_list_3]))
 else:
+    print(f'Test Default with size {OSIZE}')
     write_name = 'dag_write_1'
     read_name = 'dag_read_1'
     dag_write_func = cloudburst_client.register(dag_write, write_name)
