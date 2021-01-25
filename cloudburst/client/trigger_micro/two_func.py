@@ -34,11 +34,14 @@ def ephe_read(cloudburst, *data):
     cloudburst.put('end_2_' + key, end_2, durable=True)
 
 if len(sys.argv) < 3:
-    print('Usage: ./two_func.py {test_ephe} {osize}')
+    print('Usage: ./two_func.py {test_ephe} {osize} {num:optional}')
     exit(1)
 
 test_ephe = sys.argv[1] == '0'
 OSIZE = int(sys.argv[2])
+
+if len(sys.argv) > 3:
+    iter_num = int(sys.argv[3])
 
 if test_ephe:
     print(f'Test Trigger-Cache with size {OSIZE}')
@@ -51,7 +54,7 @@ if test_ephe:
     elasped_list_3 = []
     # key_pre = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
     key_pre = 's'
-    for i in range(10):
+    for i in range(iter_num):
         # key_n = f'{key_pre}_{i}'
         key_n = f'two_func'
         cur_stamp = time.time()
@@ -98,7 +101,7 @@ else:
     arg_map = {write_name: [key_n, OSIZE]}
 
     elasped_list = []
-    for _ in range(10):
+    for _ in range(iter_num):
         cloudburst_client.call_dag(dag_name, arg_map, True)
         start = cloudburst_client.get('start_')
         end = cloudburst_client.get('end_')
