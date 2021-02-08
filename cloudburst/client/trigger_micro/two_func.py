@@ -1,8 +1,10 @@
 from cloudburst.client.ephe_common import *
 
-def dag_write(cloudburst, key, size):
-    # new_v = np.random.random(size)
-    new_v = 'a' * size
+def dag_write(cloudburst, key, size, use_str):
+    if use_str:
+        new_v = 'a' * size
+    else:
+        new_v = np.random.random(size)
 
     start_1 = time.time()
     cloudburst.put('start_', start_1, durable=True)
@@ -12,9 +14,11 @@ def dag_read(cloudburst, up_res):
     end_1 = time.time()
     cloudburst.put('end_', end_1, durable=True)
 
-def ephe_write(cloudburst, name, key, size):    
-    # new_v = np.random.random(size)
-    new_v = 'a' * size
+def ephe_write(cloudburst, name, key, size, use_str):    
+    if use_str:
+        new_v = 'a' * size
+    else:
+        new_v = np.random.random(size)
     init_sess = True if 'session' in name else False
 
     start_1 = time.time()
@@ -40,8 +44,13 @@ if len(sys.argv) < 3:
 test_ephe = sys.argv[1] == '0'
 OSIZE = int(sys.argv[2])
 
+iter_num = 4
 if len(sys.argv) > 3:
     iter_num = int(sys.argv[3])
+
+use_str = True
+if len(sys.argv) > 4:
+    use_str = sys.argv[4] == '0'
 
 if test_ephe:
     print(f'Test Trigger-Cache with size {OSIZE}')
@@ -58,7 +67,7 @@ if test_ephe:
         # key_n = f'{key_pre}_{i}'
         key_n = f'two_func'
         cur_stamp = time.time()
-        write_func(bucket_name, key_n, OSIZE)
+        write_func(bucket_name, key_n, OSIZE, use_str)
 
         # print('Retriving results')
         retri_start = time.time()
@@ -101,7 +110,7 @@ else:
     print(f'Create dag {dag_name} {success} {error}')
 
     key_n = 'dag1'
-    arg_map = {write_name: [key_n, OSIZE]}
+    arg_map = {write_name: [key_n, OSIZE, use_str]}
 
     elasped_list = []
     for _ in range(iter_num):
