@@ -44,7 +44,8 @@ WORKDIR /
 # Install Trigger KVS client
 ENV EPHE_HOME /ephe-store
 RUN git clone https://github.com/MincYu/ephe-store
-RUN cd $EPHE_HOME && git checkout local-coord
+WORKDIR /ephe-store
+RUN git checkout local-coord
 WORKDIR /ephe-store/kvs
 RUN bash ./scripts/compile.sh
 RUN cd client/python && python3.6 setup.py install
