@@ -108,7 +108,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
     # This is for handle the invocation from queue
     # Mainly for storage event
     func_call_queue_socket = context.socket(zmq.PULL)
-    func_call_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_QUEUE_PORT))
+    # func_call_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_QUEUE_PORT))
+    func_call_queue_socket.bind('ipc:///tmp/invoc') # message from local coordinator
 
     dag_create_socket = context.socket(zmq.REP)
     dag_create_socket.bind(sutils.BIND_ADDR_TEMPLATE % (DAG_CREATE_PORT))

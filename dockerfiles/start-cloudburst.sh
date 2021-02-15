@@ -76,10 +76,13 @@ elif [[ "$ROLE" = "scheduler" ]]; then
   echo "    routing_address: $ROUTE_ADDR" >> conf/cloudburst-config.yml
   echo "    policy: $POLICY" >> conf/cloudburst-config.yml
 
-  echo "Scheduler Started"
+  # run coordintor locally
+  bash /run-local-coordinator.sh
+  echo "Coordinator Started"
 
   while true; do
     python3.6 cloudburst/server/scheduler/server.py
+    echo "Scheduler Started"
     if [[ "$?" = "1" ]]; then
       cat cloudburst/log_scheduler.txt
       exit 1

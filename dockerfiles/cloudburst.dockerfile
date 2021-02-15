@@ -47,6 +47,12 @@ RUN git clone https://github.com/MincYu/ephe-store
 WORKDIR /ephe-store/kvs
 RUN bash ./scripts/compile.sh
 RUN cd client/python && python3.6 setup.py install
+
+# Build coordinator
+WORKDIR /
+COPY $EPHE_HOME/common $EPHE_HOME/coordinator/common
+WORKDIR $EPHE_HOME/coordinator
+RUN bash scripts/build.sh -j4 -bRelease
 WORKDIR /
 
 # These installations are currently pipeline specific until we figure out a
@@ -54,6 +60,7 @@ WORKDIR /
 RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image torch torchvision
 
 COPY start-cloudburst.sh /start-cloudburst.sh
+COPY run-local-coordinator.sh /run-local-coordinator.sh
 
 RUN pip3 install pandas s3fs 
 

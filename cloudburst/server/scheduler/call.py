@@ -69,6 +69,7 @@ def call_function(func_call_socket, pusher_cache, policy):
     func_call_socket.send(response.SerializeToString())
 
 def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
+    recv_stamp = time.time()
     call = FunctionCall()
     call.ParseFromString(func_call_queue_socket.recv())
 
@@ -92,7 +93,10 @@ def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
         logging.info('Pick executor %s:%d for STORAGE CALL %s with locations %s' % (ip, tid, call.name, loc_set))
 
         sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
+
+        send_stamp = time.time()
         sckt.send(call.SerializeToString())
+        logging.info(f'Storage Call Runtime. recv_stamp: {recv_stamp}, send_stamp: {send_stamp}')
 
 def call_dag(call, pusher_cache, dags, policy, request_id=None):
     dag, sources = dags[call.name]
