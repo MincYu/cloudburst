@@ -14,7 +14,7 @@
 
 FROM hydroproject/base:latest
 
-ARG source_branch=master
+ARG source_branch=function-interact
 ARG build_branch=docker-build
 
 USER root
