@@ -50,7 +50,7 @@ RUN cd client/python && python3.6 setup.py install
 
 # Build coordinator
 WORKDIR /
-COPY $EPHE_HOME/common $EPHE_HOME/coordinator/common
+RUN cp $EPHE_HOME/common $EPHE_HOME/coordinator/common
 WORKDIR $EPHE_HOME/coordinator
 RUN bash scripts/build.sh -j4 -bRelease
 WORKDIR /
