@@ -41,6 +41,7 @@ serializer = Serializer()
 
 
 def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_ephe=False):
+    recv_stamp = time.time()
     call = FunctionCall()
     call.ParseFromString(exec_socket.recv())
 
@@ -58,7 +59,10 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_eph
         result = ('ERROR', sutils.error.SerializeToString())
     else:
         function_cache[call.name] = f
+        get_func_stamp = time.time()
 
+        logging.info(f'Runtime for executing {call.name}. recv_stamp: {recv_stamp}, get_func_stamp: {get_func_stamp}')
+        
         # We set the session as the response key from scheduler
         # It should be uuid and identical
         if has_ephe:

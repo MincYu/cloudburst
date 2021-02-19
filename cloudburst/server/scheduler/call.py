@@ -94,9 +94,9 @@ def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
 
         sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
 
-        send_stamp = time.time()
+        to_send_stamp = time.time()
         sckt.send(call.SerializeToString())
-        logging.info(f'Storage Call Runtime. recv_stamp: {recv_stamp}, send_stamp: {send_stamp}')
+        logging.info(f'Storage Call Runtime. recv_stamp: {recv_stamp}, send_stamp: {to_send_stamp}')
 
 def call_dag(call, pusher_cache, dags, policy, request_id=None):
     dag, sources = dags[call.name]
