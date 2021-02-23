@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import logging
 import time
 import uuid
 
@@ -29,7 +30,6 @@ from cloudburst.shared.reference import CloudburstReference
 from cloudburst.shared.serializer import Serializer
 
 serializer = Serializer()
-import logging
 
 
 def call_function(func_call_socket, pusher_cache, policy):
@@ -45,8 +45,8 @@ def call_function(func_call_socket, pusher_cache, policy):
     # Filter the arguments for CloudburstReferences, and use the policy engine to
     # pick a node for this request.
     refs = list(filter(lambda arg: type(arg) == CloudburstReference,
-                    map(lambda arg: serializer.load(arg),
-                        call.arguments.values)))
+                       map(lambda arg: serializer.load(arg),
+                           call.arguments.values)))
     result = policy.pick_executor(refs)
 
     response = GenericResponse()
@@ -58,7 +58,8 @@ def call_function(func_call_socket, pusher_cache, policy):
 
     # Forward the request on to the chosen executor node.
     ip, tid = result
-    logging.info('Pick executor %s:%d for CLIENT CALL %s' % (ip, tid, call.name))
+    logging.info('Pick executor %s:%d for CLIENT CALL %s' %
+                 (ip, tid, call.name))
 
     sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
     sckt.send(call.SerializeToString())
@@ -67,6 +68,45 @@ def call_function(func_call_socket, pusher_cache, policy):
     response.success = True
     response.response_id = call.response_key
     func_call_socket.send(response.SerializeToString())
+
+
+def call_function_proactive(func_call_socket, pusher_cache, policy):
+    # Parse the received protobuf for this function call.
+    call = FunctionCall()
+    call.ParseFromString(func_call_socket.recv())
+
+    # If there is no response key set for this request, we generate a random
+    # UUID.
+    if not call.response_key:
+        call.response_key = str(uuid.uuid4())
+
+    # Filter the arguments for CloudburstReferences, and use the policy engine to
+    # pick a node for this request.
+    refs = list(filter(lambda arg: type(arg) == CloudburstReference,
+                       map(lambda arg: serializer.load(arg),
+                           call.arguments.values)))
+    result = policy.pick_executor_proactive(refs)
+
+    response = GenericResponse()
+    if result is None:
+        response.success = False
+        response.error = NO_RESOURCES
+        func_call_socket.send(response.SerializeToString())
+        return
+
+    # Forward the request on to the chosen executor node.
+    ip, tid = result
+    logging.info('Pick executor %s:%d for CLIENT CALL %s' %
+                 (ip, tid, call.name))
+
+    sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
+    sckt.send(call.SerializeToString())
+
+    # Send a success response to the user with the response key.
+    response.success = True
+    response.response_id = call.response_key
+    func_call_socket.send(response.SerializeToString())
+
 
 def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
     call = FunctionCall()
@@ -78,7 +118,7 @@ def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
         call.response_key = str(uuid.uuid4())
 
     if call.source_hint == STORAGE:
-        # It means the invocation is from storage, 
+        # It means the invocation is from storage,
         # so we parse the arguments in a different way
         # TODO remove loc from the original call
         loc_set = set(call.locations)
@@ -89,10 +129,12 @@ def call_function_from_queue(func_call_queue_socket, pusher_cache, policy):
             return
 
         ip, tid = result
-        logging.info('Pick executor %s:%d for STORAGE CALL %s with locations %s' % (ip, tid, call.name, loc_set))
+        logging.info('Pick executor %s:%d for STORAGE CALL %s with locations %s' % (
+            ip, tid, call.name, loc_set))
 
         sckt = pusher_cache.get(utils.get_exec_address(ip, tid))
         sckt.send(call.SerializeToString())
+
 
 def call_dag(call, pusher_cache, dags, policy, request_id=None):
     dag, sources = dags[call.name]

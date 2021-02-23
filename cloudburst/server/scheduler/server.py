@@ -30,7 +30,7 @@ from cloudburst.server.scheduler.create import (
     create_function,
     delete_dag
 )
-from cloudburst.server.scheduler.policy.default_policy import (
+from cloudburst.server.scheduler.policy.proactive_policy import (
     DefaultCloudburstSchedulerPolicy
 )
 import cloudburst.server.scheduler.utils as sched_utils
@@ -67,6 +67,7 @@ REPORT_THRESHOLD = 5
 
 logging.basicConfig(filename='log_scheduler.txt', level=logging.INFO,
                     format='%(asctime)s %(message)s')
+
 
 def scheduler(ip, mgmt_ip, route_addr, policy_type):
 
@@ -108,7 +109,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
     # This is for handle the invocation from queue
     # Mainly for storage event
     func_call_queue_socket = context.socket(zmq.PULL)
-    func_call_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_QUEUE_PORT))
+    func_call_queue_socket.bind(
+        sutils.BIND_ADDR_TEMPLATE % (FUNC_CALL_QUEUE_PORT))
 
     dag_create_socket = context.socket(zmq.REP)
     dag_create_socket.bind(sutils.BIND_ADDR_TEMPLATE % (DAG_CREATE_PORT))
@@ -130,7 +132,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                              (sutils.SCHED_UPDATE_PORT))
 
     pin_accept_socket = context.socket(zmq.PULL)
-    pin_accept_socket.setsockopt(zmq.RCVTIMEO, 10000) # 10 seconds.
+    pin_accept_socket.setsockopt(zmq.RCVTIMEO, 10000)  # 10 seconds.
     pin_accept_socket.bind(sutils.BIND_ADDR_TEMPLATE %
                            (sutils.PIN_ACCEPT_PORT))
 
@@ -146,7 +148,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
         # Relax strict alternation between request and reply.
         # For detailed explanation, see here: http://api.zeromq.org/4-1:zmq-setsockopt
         management_request_socket.setsockopt(zmq.REQ_RELAXED, 1)
-        management_request_socket.connect(sched_utils.get_scheduler_list_address(mgmt_ip))
+        management_request_socket.connect(
+            sched_utils.get_scheduler_list_address(mgmt_ip))
 
     pusher_cache = SocketCache(context, zmq.PUSH)
 
@@ -165,7 +168,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
 
     # Start the policy engine.
     policy = DefaultCloudburstSchedulerPolicy(pin_accept_socket, pusher_cache,
-                                           kvs, ip, policy_type, local=local)
+                                              kvs, ip, policy_type, local=local)
     policy.update()
 
     start = time.time()
@@ -183,9 +186,10 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
 
         if func_call_socket in socks and socks[func_call_socket] == zmq.POLLIN:
             call_function(func_call_socket, pusher_cache, policy)
-        
+
         if func_call_queue_socket in socks and socks[func_call_queue_socket] == zmq.POLLIN:
-            call_function_from_queue(func_call_queue_socket, pusher_cache, policy)
+            call_function_from_queue(
+                func_call_queue_socket, pusher_cache, policy)
 
         if (dag_create_socket in socks and socks[dag_create_socket]
                 == zmq.POLLIN):
@@ -295,7 +299,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
             # local mode, so there is no need to deal with caches and other
             # schedulers.
             if not local:
-                latest_schedulers = sched_utils.get_ip_set(management_request_socket, False)
+                latest_schedulers = sched_utils.get_ip_set(
+                    management_request_socket, False)
                 if latest_schedulers:
                     schedulers = latest_schedulers
 
@@ -326,7 +331,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                 fstats.name = fname
                 fstats.call_count = call_frequency[fname]
                 logging.debug('Reporting %d calls for function %s.' %
-                             (call_frequency[fname], fname))
+                              (call_frequency[fname], fname))
 
                 call_frequency[fname] = 0
 
