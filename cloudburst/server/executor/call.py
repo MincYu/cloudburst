@@ -32,7 +32,7 @@ from cloudburst.shared.proto.cloudburst_pb2 import (
     FunctionCall,
     NORMAL, MULTI,  # Cloudburst's consistency modes,
     EXECUTION_ERROR, FUNC_NOT_FOUND,  # Cloudburst's error types
-    MULTIEXEC # Cloudburst's execution types
+    MULTIEXEC  # Cloudburst's execution types
 )
 from cloudburst.shared.reference import CloudburstReference
 from cloudburst.shared.serializer import Serializer
@@ -49,7 +49,8 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_eph
     if call.name in function_cache:
         f = function_cache[call.name]
     else:
-        f = utils.retrieve_function(call.name, kvs, user_library, call.consistency)
+        f = utils.retrieve_function(
+            call.name, kvs, user_library, call.consistency)
 
     if not f:
         logging.info('Function %s not found! Returning an error.' %
@@ -86,12 +87,68 @@ def exec_function(exec_socket, kvs, user_library, cache, function_cache, has_eph
             succeed = kvs.put(call.response_key, result)
         else:
             result = serializer.dump_lattice(result, MultiKeyCausalLattice,
-                                            causal_dependencies=dependencies)
+                                             causal_dependencies=dependencies)
             succeed = kvs.causal_put(call.response_key, result)
 
         if not succeed:
             logging.info(f'Unsuccessful attempt to put key {call.response_key} '
-                        + 'into the KVS.')
+                         + 'into the KVS.')
+
+
+def exec_function_proactive(exec_socket, kvs, user_library, cache, function_cache, has_ephe=False):
+    call = FunctionCall()
+    call.ParseFromString(exec_socket.recv())
+
+    fargs = [serializer.load(arg) for arg in call.arguments.values]
+
+    if call.name in function_cache:
+        f = function_cache[call.name]
+    else:
+        f = utils.retrieve_function(
+            call.name, kvs, user_library, call.consistency)
+
+    if not f:
+        logging.info('Function %s not found! Returning an error.' %
+                     (call.name))
+        sutils.error.error = FUNC_NOT_FOUND
+        result = ('ERROR', sutils.error.SerializeToString())
+    else:
+        function_cache[call.name] = f
+
+        # We set the session as the response key from scheduler
+        # It should be uuid and identical
+        if has_ephe:
+            user_library.session = call.response_key
+        try:
+            if call.consistency == NORMAL:
+                result = _exec_func_normal(kvs, f, fargs, user_library, cache)
+                logging.info('Finished executing %s: %s!' % (call.name,
+                                                             str(result)))
+            else:
+                dependencies = {}
+                result = _exec_func_causal(kvs, f, fargs, user_library,
+                                           dependencies=dependencies)
+        except Exception as e:
+            logging.exception('Unexpected error %s while executing function.' %
+                              (str(e)))
+            sutils.error.error = EXECUTION_ERROR
+            result = ('ERROR: ' + str(e), sutils.error.SerializeToString())
+
+    # When we use ephe kvs for coordination, we do not write the results to anna
+    # Instead, we presume the function will put the result mannually
+    if not has_ephe:
+        if call.consistency == NORMAL:
+            result = serializer.dump_lattice(result)
+            succeed = kvs.put(call.response_key, result)
+        else:
+            result = serializer.dump_lattice(result, MultiKeyCausalLattice,
+                                             causal_dependencies=dependencies)
+            succeed = kvs.causal_put(call.response_key, result)
+
+        if not succeed:
+            logging.info(f'Unsuccessful attempt to put key {call.response_key} '
+                         + 'into the KVS.')
+    return call.name
 
 
 def _exec_func_normal(kvs, func, args, user_lib, cache):
@@ -105,7 +162,7 @@ def _exec_func_normal(kvs, func, args, user_lib, cache):
             processed += (arg,)
     args = processed
 
-    if all([type(arg) == list for arg in args]): # A batching request.
+    if all([type(arg) == list for arg in args]):  # A batching request.
         refs = []
 
         # For a batching request, we pull out the references in each sublist of
@@ -241,7 +298,7 @@ def _resolve_ref_causal(refs, kvs, schedule, key_version_locations,
                 kv_pairs[key] = serializer.load_lattice(kv_pairs[key])[0]
             else:
                 raise ValueError(('Invalid lattice type %s encountered when' +
-                                 ' executing in causal mode.') %
+                                  ' executing in causal mode.') %
                                  str(type(kv_pairs[key])))
         else:
             kv_pairs[key] = kv_pairs[key].reveal()
@@ -312,7 +369,7 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
         fargs = [[]] * len(farg_sets[0])
         for idx in range(len(fargs)):
             fargs[idx] = [fset[idx] for fset in farg_sets]
-    else: # There will only be one thing in farg_sets
+    else:  # There will only be one thing in farg_sets
         fargs = farg_sets[0]
 
     result_list = _exec_func_normal(kvs, function, fargs, user_lib, cache)
@@ -326,7 +383,7 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
         this_ref = None
         for ref in schedule.dag.functions:
             if ref.name == fname:
-                this_ref = ref # There must be a match.
+                this_ref = ref  # There must be a match.
 
         if this_ref.type == MULTIEXEC:
             if serializer.dump(result) in this_ref.invalid_results:
@@ -341,7 +398,8 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
                 new_trigger.target_function = conn.sink
 
                 dest_ip = schedule.locations[conn.sink]
-                sckt = pusher_cache.get(sutils.get_dag_trigger_address(dest_ip))
+                sckt = pusher_cache.get(
+                    sutils.get_dag_trigger_address(dest_ip))
                 sckt.send(new_trigger.SerializeToString())
 
     if is_sink:
@@ -355,7 +413,8 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
 
                     logging.info('Sending continuation to scheduler for DAG %s.' %
                                  (schedule.id))
-                    sckt = pusher_cache.get(utils.get_continuation_address(schedulers))
+                    sckt = pusher_cache.get(
+                        utils.get_continuation_address(schedulers))
                     sckt.send(cont.SerializeToString())
         elif schedule.response_address:
             for idx, pair in enumerate(zip(schedules, result_list)):
@@ -428,7 +487,7 @@ def _exec_dag_function_causal(pusher_cache, kvs, triggers, function, schedule,
     this_ref = None
     for ref in schedule.dag.functions:
         if ref.name == fname:
-            this_ref = ref # There must be a match.
+            this_ref = ref  # There must be a match.
 
     success = True
     if this_ref.type == MULTIEXEC:

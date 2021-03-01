@@ -23,17 +23,17 @@ import zmq
 
 from cloudburst.server import utils as sutils
 from cloudburst.server.executor import utils
-from cloudburst.server.executor.call import exec_function, exec_dag_function
-from cloudburst.server.executor.pin import pin, unpin
+from cloudburst.server.executor.call import exec_function, exec_dag_function, exec_function_proactive
+from cloudburst.server.executor.pin import pin, unpin, unpin_proactive
 from cloudburst.server.executor.user_library import CloudburstUserLibrary
 from cloudburst.shared.anna_ipc_client import AnnaIpcClient
 from cloudburst.shared.proto.cloudburst_pb2 import (
     DagSchedule,
     DagTrigger,
-    MULTIEXEC # Cloudburst's execution types
+    MULTIEXEC  # Cloudburst's execution types
 )
 from cloudburst.shared.proto.internal_pb2 import (
-    CPU, GPU, # Cloudburst's executor types
+    CPU, GPU,  # Cloudburst's executor types
     ExecutorStatistics,
     ThreadStatus,
 )
@@ -94,7 +94,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     has_ephe = False
     if mgmt_ip:
         if 'STORAGE_OR_DEFAULT' in os.environ and os.environ['STORAGE_OR_DEFAULT'] == '0':
-            client = AnnaTcpClient(os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
+            client = AnnaTcpClient(
+                os.environ['ROUTE_ADDR'], ip, local=False, offset=thread_id)
             has_ephe = True
         else:
             client = AnnaIpcClient(thread_id, context)
@@ -117,7 +118,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
         client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
         local = True
 
-    user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id, client, has_ephe=has_ephe)
+    user_library = CloudburstUserLibrary(
+        context, pusher_cache, ip, thread_id, client, has_ephe=has_ephe)
 
     status = ThreadStatus()
     status.ip = ip
@@ -180,6 +182,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     while True:
         socks = dict(poller.poll(timeout=1000))
 
+        del_list = []
+
         if pin_socket in socks and socks[pin_socket] == zmq.POLLIN:
             work_start = time.time()
             batching = pin(pin_socket, pusher_cache, client, status,
@@ -193,8 +197,15 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if unpin_socket in socks and socks[unpin_socket] == zmq.POLLIN:
             work_start = time.time()
-            unpin(unpin_socket, status, function_cache, runtimes,
-                  exec_counts)
+            # unpin(unpin_socket, status, function_cache, runtimes,
+            #       exec_counts)
+            # Instead of killing the process, we remove the relevant function caches
+            unpinned_name = unpin_proactive(unpin_socket, status, function_cache, runtimes,
+                                            exec_counts)
+            # tell the later codes to clear out traces
+            if unpinned_name:
+                # del_list.append(unpinned_name)
+                queue[unpinned_name] = {}
             utils.push_status(schedulers, pusher_cache, status)
 
             elapsed = time.time() - work_start
@@ -203,10 +214,17 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if exec_socket in socks and socks[exec_socket] == zmq.POLLIN:
             work_start = time.time()
-            exec_function(exec_socket, client, user_library, cache,
-                          function_cache, has_ephe=has_ephe)
+            # exec_function(exec_socket, client, user_library, cache,
+            #               function_cache, has_ephe=has_ephe)
+            exec_name = exec_function_proactive(exec_socket, client, user_library, cache,
+                                                function_cache, has_ephe=has_ephe)
             user_library.close()
 
+            # remove funtion from status, so scheduler knows to add it to unpin
+            if exec_name:
+                queue[unpinned_name] = {}
+                if exec_name in status.functions:
+                    status.functions.remove(exec_name)
             utils.push_status(schedulers, pusher_cache, status)
 
             elapsed = time.time() - work_start
@@ -227,9 +245,9 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                     msg = dag_queue_socket.recv(zmq.DONTWAIT)
                 except zmq.ZMQError as e:
                     if e.errno == zmq.EAGAIN:
-                        break # There are no more messages.
+                        break  # There are no more messages.
                     else:
-                        raise e # Unexpected error.
+                        raise e  # Unexpected error.
 
                 schedule.ParseFromString(msg)
                 fname = schedule.target_function
@@ -303,16 +321,16 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
             trigger_keys = set()
 
-            for _ in range(count): # Dequeue count number of messages.
+            for _ in range(count):  # Dequeue count number of messages.
                 trigger = DagTrigger()
 
                 try:
                     msg = dag_exec_socket.recv(zmq.DONTWAIT)
                 except zmq.ZMQError as e:
-                    if e.errno == zmq.EAGAIN: # There are no more messages.
+                    if e.errno == zmq.EAGAIN:  # There are no more messages.
                         break
                     else:
-                        raise e # Unexpected error.
+                        raise e  # Unexpected error.
 
                 trigger.ParseFromString(msg)
 
@@ -345,7 +363,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                 continue
 
             fref = None
-            schedule = queue[fname][list(trigger_keys)[0][0]] # Pick a random schedule to check.
+            # Pick a random schedule to check.
+            schedule = queue[fname][list(trigger_keys)[0][0]]
             # Check to see what type of execution this function is.
             for ref in schedule.dag.functions:
                 if ref.name == fname:
@@ -374,7 +393,6 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                     schedule = queue[fname][key[0]]
                     schedules.append(schedule)
 
-
             # Pass all of the trigger_sets into exec_dag_function at once.
             # We also include the batching variaible to make sure we know
             # whether to pass lists into the fn or not.
@@ -390,7 +408,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
                 for key, success in zip(trigger_keys, successes):
                     if success:
-                        del queue[fname][key[0]] # key[0] is trigger.id.
+                        del queue[fname][key[0]]  # key[0] is trigger.id.
 
                         fend = time.time()
                         fstart = receive_times[key]

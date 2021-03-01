@@ -20,7 +20,7 @@ import zmq
 
 from cloudburst.shared.proto.cloudburst_pb2 import GenericResponse
 from cloudburst.shared.proto.internal_pb2 import (
-    CPU, GPU, # Cloudburst's executor types
+    CPU, GPU,  # Cloudburst's executor types
     PinFunction
 )
 from cloudburst.shared.proto.shared_pb2 import StringSet
@@ -95,7 +95,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
 
         # Indicates if we are running in local mode
         self.local = local
-    
+
     def pick_executor_with_loc(self, function_name, locations):
         # TODO try pick executor that have both function and data first
         # Check if available executors have local data
@@ -111,7 +111,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
         for ip, tid in executors:
             if ip in locations:
                 avail_executors.append((ip, tid))
-        
+
         if len(avail_executors) > 0:
             chosen_exe = random.choice(avail_executors)
         else:
@@ -165,13 +165,12 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
                 self.function_locations[function_name].append(executor)
                 return executor
 
-
         # Generate a list of all the keys in the system; if any of these nodes
         # have received many requests, we remove them from the executor set
         # with high probability.
         for key in self.running_counts:
-           if (len(self.running_counts[key]) > 1000 and sys_random.random() >
-                   self.random_threshold):
+            if (len(self.running_counts[key]) > 1000 and sys_random.random() >
+                    self.random_threshold):
                 if len(executors) > 1:
                     executors.discard(key)
 
@@ -259,7 +258,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
 
             if len(already_pinned) > 0:
                 for fn, thread in already_pinned:
-                    candidate_nodes.add(thread[0]) # The node's IP
+                    candidate_nodes.add(thread[0])  # The node's IP
 
                 for node, tid in self.unpinned_cpu_executors:
                     if node in candidate_nodes:
@@ -278,7 +277,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
                         for i in range(NUM_EXECUTOR_THREADS):
                             candidates.add((node, i))
 
-        if len(candidates) == 0: # There no valid executors to colocate on.
+        if len(candidates) == 0:  # There no valid executors to colocate on.
             return self.pin_function(dag_name, function_ref, [])
 
         # Construct a PinFunction message to be sent to executors.
@@ -338,7 +337,6 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
                 # Try again without colocation.
                 return self.pin_function(self, dag_name, function_ref, [])
 
-
     def commit_dag(self, dag_name):
         for function_name, location in self.pending_dags[dag_name]:
             if function_name not in self.function_locations:
@@ -373,7 +371,7 @@ class DefaultCloudburstSchedulerPolicy(BaseCloudburstSchedulerPolicy):
     def process_status(self, status):
         key = (status.ip, status.tid)
         logging.debug('Received status update from executor %s:%d.' %
-                     (key[0], int(key[1])))
+                      (key[0], int(key[1])))
 
         # This means that this node is currently departing, so we remove it
         # from all of our metadata tracking.

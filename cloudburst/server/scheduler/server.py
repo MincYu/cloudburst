@@ -30,7 +30,10 @@ from cloudburst.server.scheduler.create import (
     create_function,
     delete_dag
 )
-from cloudburst.server.scheduler.policy.proactive_policy import (
+# from cloudburst.server.scheduler.policy.proactive_policy import (
+#     DefaultCloudburstSchedulerPolicy
+# )
+from cloudburst.server.scheduler.policy.default_policy import (
     DefaultCloudburstSchedulerPolicy
 )
 import cloudburst.server.scheduler.utils as sched_utils

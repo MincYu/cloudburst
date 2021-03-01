@@ -26,7 +26,8 @@ def pin(pin_socket, pusher_cache, kvs, status, function_cache, runtimes,
     pin_msg = PinFunction()
     pin_msg.ParseFromString(serialized)
 
-    sckt = pusher_cache.get(sutils.get_pin_accept_port(pin_msg.response_address))
+    sckt = pusher_cache.get(
+        sutils.get_pin_accept_port(pin_msg.response_address))
     name = pin_msg.name
 
     # We currently only allow one pinned function per container in non-local
@@ -81,3 +82,22 @@ def unpin(unpin_socket, status, function_cache, runtimes, exec_counts):
     # the context of the previous function. Exiting with code 0 means that we
     # will get restarted by the wrapper script.
     sys.exit(0)
+
+
+def unpin_proactive(unpin_socket, status, function_cache, runtimes, exec_counts):
+    name = unpin_socket.recv_string()
+    if name not in function_cache:
+        logging.info('Received an unpin request for an unknown function: %s.' %
+                     (name))
+        return
+
+    logging.info('Removing function %s from my local pinned functions.' %
+                 (name))
+    if name in status.functions:
+        status.functions.remove(name)
+        return name
+
+    # We restart the container after unpinning the function in order to clear
+    # the context of the previous function. Exiting with code 0 means that we
+    # will get restarted by the wrapper script.
+    # sys.exit(0)
