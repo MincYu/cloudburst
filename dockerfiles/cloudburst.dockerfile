@@ -41,10 +41,6 @@ WORKDIR $HYDRO_HOME/cloudburst
 RUN ./scripts/build.sh
 WORKDIR /
 
-# These installations are currently pipeline specific until we figure out a
-# better way to do package management for Python.
-RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image torch torchvision
-
 # Install Trigger KVS client
 ENV EPHE_HOME /ephe-store
 RUN git clone https://github.com/MincYu/ephe-store
@@ -71,6 +67,10 @@ COPY start-cloudburst.sh /start-cloudburst.sh
 COPY run-local-coordinator.sh /run-local-coordinator.sh
 
 RUN pip3 install pandas s3fs 
+
+# These installations are currently pipeline specific until we figure out a
+# better way to do package management for Python.
+RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image torch torchvision
 
 RUN touch a
 RUN pip3 install --upgrade git+https://github.com/devin-petersohn/modin@engines/cloudburst_init
