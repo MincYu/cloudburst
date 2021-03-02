@@ -53,7 +53,7 @@ RUN cd client/python && python3.6 setup.py install
 
 # new shm kvs client
 WORKDIR /ephe-store/kvs/client/cpp
-RUN mkdir -f build && cd build && cmake .. && make
+RUN mkdir -p build && cd build && cmake .. && make
 RUN cp build/libPyCpp.so $HYDRO_HOME/cloudburst/cloudburst
 
 # Build coordinator
