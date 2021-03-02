@@ -67,8 +67,9 @@ if [[ "$ROLE" = "executor" ]]; then
     python3.6 cloudburst/server/executor/server.py
 
     if [[ "$?" = "1" ]]; then
-      cat cloudburst/log_executor.txt
-      exit 1
+      # cat cloudburst/log_executor.txt
+      # exit 1
+      echo "return error"
     fi
   done
 elif [[ "$ROLE" = "scheduler" ]]; then

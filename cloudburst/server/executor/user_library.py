@@ -16,7 +16,7 @@ import zmq
 
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
-from ephekvs.client import KVSClient
+# from ephekvs.client import KVSClient
 import cloudburst.libPyCpp
 
 serializer = Serializer()
@@ -62,9 +62,9 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         self.recv_inbox_socket.bind(self.address)
 
         self.has_ephe = has_ephe
-        if has_ephe:
-            self.ephe_client = KVSClient(thread_id=tid, context=context)
-            self.session = None
+        # if has_ephe:
+        #     self.ephe_client = KVSClient(thread_id=tid, context=context)
+        #     self.session = None
     
     def gen_test_str(self, size):
         test_str = libPyCpp(size)
@@ -92,21 +92,23 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
     def put_ephe(self, bucket_key, value, use_session=False):
         # ref should be (bucket, key, session) tuple if it is a bucket key, otherwise it is a list
-        if type(bucket_key) == list and type(value) == list:
-            results = []
-            for b_k_s, v in zip(bucket_key, value):
-                cur_session = self.session if use_session else b_k_s[2]
-                results.append(self.ephe_client.put(b_k_s[0], b_k_s[1], v, session=cur_session))
-            return results
-        else:
-            cur_session = self.session if use_session else bucket_key[2]
-            return self.ephe_client.put(bucket_key[0], bucket_key[1], value, session=cur_session)
+        # if type(bucket_key) == list and type(value) == list:
+        #     results = []
+        #     for b_k_s, v in zip(bucket_key, value):
+        #         cur_session = self.session if use_session else b_k_s[2]
+        #         results.append(self.ephe_client.put(b_k_s[0], b_k_s[1], v, session=cur_session))
+        #     return results
+        # else:
+        #     cur_session = self.session if use_session else bucket_key[2]
+        #     return self.ephe_client.put(bucket_key[0], bucket_key[1], value, session=cur_session)
+        return
 
     def get_ephe(self, bucket_key):
-        if type(bucket_key) == list:
-            return [self.ephe_client.get(b_k_s[0], b_k_s[1], session=b_k_s[2]) for b_k_s in bucket_key]
-        else:
-            return self.ephe_client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
+        # if type(bucket_key) == list:
+        #     return [self.ephe_client.get(b_k_s[0], b_k_s[1], session=b_k_s[2]) for b_k_s in bucket_key]
+        # else:
+        #     return self.ephe_client.get(bucket_key[0], bucket_key[1], session=bucket_key[2])
+        return
 
     def put_anna(self, ref, value, use_session=False):
         if use_session:
