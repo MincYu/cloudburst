@@ -14,7 +14,7 @@
 
 FROM hydroproject/base:latest
 
-ARG source_branch=function-interact
+ARG source_branch=func-shm-io
 ARG build_branch=docker-build
 
 USER root
@@ -45,10 +45,16 @@ WORKDIR /
 ENV EPHE_HOME /ephe-store
 RUN git clone https://github.com/MincYu/ephe-store
 WORKDIR /ephe-store
-RUN git checkout local-coord
+RUN git checkout shm-io
 WORKDIR /ephe-store/kvs
+# old kvs client
 RUN bash ./scripts/compile.sh
 RUN cd client/python && python3.6 setup.py install
+
+# new shm kvs client
+WORKDIR /ephe-store/kvs/client/cpp
+RUN mkdir -f build && cd build && cmake .. && make
+RUN cp build/libPyCpp.so $HYDRO_HOME/cloudburst/cloudburst
 
 # Build coordinator
 WORKDIR /
