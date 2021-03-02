@@ -41,6 +41,10 @@ WORKDIR $HYDRO_HOME/cloudburst
 RUN ./scripts/build.sh
 WORKDIR /
 
+# These installations are currently pipeline specific until we figure out a
+# better way to do package management for Python.
+RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image torch torchvision
+
 # Install Trigger KVS client
 ENV EPHE_HOME /ephe-store
 RUN git clone https://github.com/MincYu/ephe-store
@@ -62,10 +66,6 @@ RUN cp -r $EPHE_HOME/common $EPHE_HOME/coordinator/common
 WORKDIR $EPHE_HOME/coordinator
 RUN bash scripts/build.sh -j4 -bRelease
 WORKDIR /
-
-# These installations are currently pipeline specific until we figure out a
-# better way to do package management for Python.
-RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image torch torchvision
 
 COPY start-cloudburst.sh /start-cloudburst.sh
 COPY run-local-coordinator.sh /run-local-coordinator.sh
