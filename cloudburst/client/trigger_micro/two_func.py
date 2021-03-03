@@ -15,14 +15,16 @@ def dag_read(cloudburst, up_res):
     cloudburst.put('end_', end_1, durable=True)
 
 def ephe_write(cloudburst, name, key, size, use_str):    
-    if use_str:
-        new_v = 'a' * size
-    else:
-        new_v = np.random.random(size)
-    init_sess = True if 'session' in name else False
+    # if use_str:
+    #     new_v = 'a' * size
+    # else:
+    #     new_v = np.random.random(size)
+    # init_sess = True if 'session' in name else False
 
+    new_v = cloudburst.gen_test_str(size)
     start_1 = time.time()
-    cloudburst.put((name, key, None), new_v, use_session=init_sess, durable=False)
+    # cloudburst.put((name, key, None), new_v, use_session=init_sess, durable=False)
+    cloudburst.put_test_str(size)
     start_2 = time.time()
 
     cloudburst.put('start_1_' + key, start_1, durable=True)

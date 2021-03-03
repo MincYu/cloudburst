@@ -17,7 +17,7 @@ import zmq
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
 # from ephekvs.client import KVSClient
-import cloudburst.libPyCpp
+import cloudburst.libPyCpp as libPyCpp
 
 serializer = Serializer()
 
@@ -67,7 +67,7 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         #     self.session = None
     
     def gen_test_str(self, size):
-        test_str = libPyCpp(size)
+        test_str = libPyCpp.gen_str(size)
         return test_str
     
     def put_test_str(self, size):
