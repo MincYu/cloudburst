@@ -66,16 +66,16 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         #     self.ephe_client = KVSClient(thread_id=tid, context=context)
         #     self.session = None
     
-    def gen_test_str(self, size):
-        test_str = libPyCpp.gen_str(size)
+    def gen_test_str(self, size, bucket_key):
+        test_str = libPyCpp.gen_str(size, bucket_key)
         return test_str
     
-    def put_test_str(self, size):
-        res = libPyCpp.kvs_put(self.executor_tid, size)
+    def put_test_str(self, size, bucket_key):
+        res = libPyCpp.kvs_put(self.executor_tid, size, bucket_key)
         return
     
-    def get_test_str(self, size):
-        res = libPyCpp.kvs_get_str(self.executor_tid, size)
+    def get_test_str(self, bucket_key):
+        res = libPyCpp.kvs_get_str(self.executor_tid, bucket_key)
         return res
 
     def put(self, ref, value, use_session=False, durable=True):

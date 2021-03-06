@@ -21,10 +21,14 @@ def ephe_write(cloudburst, name, key, size, use_str):
     #     new_v = np.random.random(size)
     # init_sess = True if 'session' in name else False
 
-    new_v = cloudburst.gen_test_str(size)
+    bucket_key = f'{name}|{key}'
+    new_v = cloudburst.gen_test_str(size, bucket_key)
+    logging.info(f'Gen str with size {len(new_v)}')
+
     start_1 = time.time()
     # cloudburst.put((name, key, None), new_v, use_session=init_sess, durable=False)
-    cloudburst.put_test_str(size)
+    cloudburst.put_test_str(size, bucket_key)
+    # logging.info(f'Put str size {size}')
     start_2 = time.time()
 
     cloudburst.put('start_1_' + key, start_1, durable=True)
@@ -33,7 +37,9 @@ def ephe_write(cloudburst, name, key, size, use_str):
 def ephe_read(cloudburst, *data):
     end_1 = time.time()
     bucket, key, session = data[0], data[1], data[2]
-    v = cloudburst.get((bucket, key, session), durable=False)
+    # v = cloudburst.get((bucket, key, session), durable=False)
+    bucket_key = f'{bucket}|{key}'
+    res = cloudburst.get_test_str(bucket_key)
     end_2 = time.time()
 
     cloudburst.put('end_1_' + key, end_1, durable=True)
