@@ -77,6 +77,9 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
     def get_test_str(self, bucket_key):
         res = libPyCpp.kvs_get_str(self.executor_tid, bucket_key)
         return res
+    
+    def free(self, obj):
+        libPyCpp.kvs_free(obj)
 
     def put(self, ref, value, use_session=False, durable=True):
         if durable or not self.has_ephe:

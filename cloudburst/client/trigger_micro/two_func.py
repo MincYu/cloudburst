@@ -30,17 +30,24 @@ def ephe_write(cloudburst, name, key, size, use_str):
     cloudburst.put_test_str(size, bucket_key)
     # logging.info(f'Put str size {size}')
     start_2 = time.time()
-
+    cloudburst.free(new_v)
     cloudburst.put('start_1_' + key, start_1, durable=True)
     cloudburst.put('start_2_' + key, start_2, durable=True)
 
 def ephe_read(cloudburst, *data):
     end_1 = time.time()
     bucket, key, session = data[0], data[1], data[2]
+    # logging.info(f'read input bucket key {bucket} {key} {session}')
     # v = cloudburst.get((bucket, key, session), durable=False)
     bucket_key = f'{bucket}|{key}'
     res = cloudburst.get_test_str(bucket_key)
     end_2 = time.time()
+
+    if res:
+        logging.info(f'Get str with size {len(res)}')
+        cloudburst.free(res)
+    else:
+        logging.info(f'Get None res')
 
     cloudburst.put('end_1_' + key, end_1, durable=True)
     cloudburst.put('end_2_' + key, end_2, durable=True)
@@ -91,12 +98,12 @@ if test_ephe:
                 end_1 = cloudburst_client.get('end_1_' + key_n)
                 
                 elasped_list_1.append([start_1, start_2, end_1, end_2])
+                # elasped_list_1.append(end_2 - start_1)
 
                 # elasped_1 = start_2 - start_1
                 # elasped_2 = end_1 - start_2
                 # # elasped_2 = end_1 - start_1
                 # elasped_3 = end_2 - end_1
-
                 # elasped_list_1.append(elasped_1)
                 # elasped_list_2.append(elasped_2)
                 # elasped_list_3.append(elasped_3)
