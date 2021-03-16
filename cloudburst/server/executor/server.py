@@ -37,6 +37,7 @@ from cloudburst.shared.proto.internal_pb2 import (
     ExecutorStatistics,
     ThreadStatus,
 )
+import cloudburst.libPyCpp as libPyCpp
 
 REPORT_THRESH = 5
 BATCH_SIZE_MAX = 20
@@ -67,6 +68,9 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     exec_socket.bind(sutils.BIND_ADDR_TEMPLATE % (sutils.FUNC_EXEC_PORT +
                                                   thread_id))
 
+    local_func_call_socket = context.socket(zmq.PULL)
+    local_func_call_socket.bind(f'ipc:///tmp/invoc_{thread_id}') # message from local coordinator
+
     dag_queue_socket = context.socket(zmq.PULL)
     dag_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (sutils.DAG_QUEUE_PORT
                                                        + thread_id))
@@ -85,6 +89,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
     poller.register(pin_socket, zmq.POLLIN)
     poller.register(unpin_socket, zmq.POLLIN)
     poller.register(exec_socket, zmq.POLLIN)
+    poller.register(local_func_call_socket, zmq.POLLIN)
     poller.register(dag_queue_socket, zmq.POLLIN)
     poller.register(dag_exec_socket, zmq.POLLIN)
     poller.register(self_depart_socket, zmq.POLLIN)
@@ -203,15 +208,24 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if exec_socket in socks and socks[exec_socket] == zmq.POLLIN:
             work_start = time.time()
+            libPyCpp.set_busy(thread_id)
             exec_function(exec_socket, client, user_library, cache,
                           function_cache, has_ephe=has_ephe)
             user_library.close()
+            libPyCpp.set_avail(thread_id)
 
             utils.push_status(schedulers, pusher_cache, status)
 
             elapsed = time.time() - work_start
             event_occupancy['func_exec'] += elapsed
             total_occupancy += elapsed
+
+        if local_func_call_socket in socks and socks[local_func_call_socket] == zmq.POLLIN:
+            libPyCpp.set_busy(thread_id)
+            exec_function(local_func_call_socket, client, user_library, cache,
+                          function_cache, has_ephe=has_ephe)
+            user_library.close()
+            libPyCpp.set_avail(thread_id)
 
         if dag_queue_socket in socks and socks[dag_queue_socket] == zmq.POLLIN:
             work_start = time.time()
