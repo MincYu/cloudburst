@@ -69,7 +69,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                                                   thread_id))
 
     local_func_call_socket = context.socket(zmq.PULL)
-    local_func_call_socket.bind(f'ipc:///tmp/invoc_{thread_id}') # message from local coordinator
+    local_func_call_socket.bind(f'ipc:///dev/shm/invoc_{thread_id}') # message from local scheduler
 
     dag_queue_socket = context.socket(zmq.PULL)
     dag_queue_socket.bind(sutils.BIND_ADDR_TEMPLATE % (sutils.DAG_QUEUE_PORT
