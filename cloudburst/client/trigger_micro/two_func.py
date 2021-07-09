@@ -1,18 +1,28 @@
 from cloudburst.client.ephe_common import *
 
-def dag_write(cloudburst, key, size, use_str):
-    if use_str:
-        new_v = 'a' * size
-    else:
-        new_v = np.random.random(size)
+def dag_write(cloudburst, size):
+    start_1 = int(time.time() * 1000000)
+    new_v = '1' * size
+    start_2 = int(time.time() * 1000000)
+    # cloudburst.put('start_', start_1, durable=True)
+    print(f'Write function start: {start_1}, gen: {start_2}')
+    return (new_v, start_1)
 
-    start_1 = time.time()
-    cloudburst.put('start_', start_1, durable=True)
-    return [new_v, key]
+def dag_read(cloudburst, *up_res):
+    up_time = up_res[1]
+    end_1 = int(time.time() * 1000000)
+    print(f'Read function start: {end_1}')
+    return str(up_time) + '|' + str(end_1)
 
-def dag_read(cloudburst, up_res):
-    end_1 = time.time()
-    cloudburst.put('end_', end_1, durable=True)
+def dag_read_multi(cloudburst, *up_res):
+
+    up_times = up_res[1::2]
+    end_1 = int(time.time() * 1000000)
+    print(f'Read function start: {end_1}')
+    return '|'.join([str(t) for t in up_times]) + ',' + str(end_1)
+
+def dag_end(cloudburst, *up_res):
+    return ','.join(up_res)
 
 def ephe_write(cloudburst, name, key, size, use_str):    
     if use_str:
@@ -37,87 +47,84 @@ def ephe_read(cloudburst, *data):
     cloudburst.put('end_1_' + key, end_1, durable=True)
     cloudburst.put('end_2_' + key, end_2, durable=True)
 
-if len(sys.argv) < 3:
-    print('Usage: ./two_func.py {test_ephe} {osize} {num:optional}')
+if len(sys.argv) < 2:
+    print('Usage: ./two_func.py {osize} {num:optional}')
     exit(1)
 
-test_ephe = sys.argv[1] == '0'
-OSIZE = int(sys.argv[2])
+OSIZE = int(sys.argv[1])
 
-iter_num = 4
-if len(sys.argv) > 3:
-    iter_num = int(sys.argv[3])
+iter_num = 8
+if len(sys.argv) > 2:
+    iter_num = int(sys.argv[2])
 
-use_str = True
-if len(sys.argv) > 4:
-    use_str = sys.argv[4] == '0'
+print(f'Test Default with size {OSIZE}')
 
-if test_ephe:
-    print(f'Test Trigger-Cache with size {OSIZE}')
-    write_func = cloudburst_client.register(ephe_write, 'write_1')
-    read_func = cloudburst_client.register(ephe_read, 'trigger_upon_write')
-
-    bucket_name = 'test_norm'
-    elasped_list_1 = []
-    elasped_list_2 = []
-    elasped_list_3 = []
-    # key_pre = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
-    key_pre = 's'
-    for i in range(iter_num):
-        # key_n = f'{key_pre}_{i}'
-        key_n = f'two_func'
-        cur_stamp = time.time()
-        write_func(bucket_name, key_n, OSIZE, use_str)
-
-        # print('Retriving results')
-        retri_start = time.time()
-        while True:
-            if time.time() - retri_start > timeout:
-                print(f'Retriving timeout at {key_n}.')
-                break
-            
-            end_2 = cloudburst_client.get('end_2_' + key_n)
-            if end_2 and end_2 > cur_stamp:
-                start_1 = cloudburst_client.get('start_1_' + key_n)
-                start_2 = cloudburst_client.get('start_2_' + key_n)
-                end_1 = cloudburst_client.get('end_1_' + key_n)
-                
-                elasped_list_1.append([start_1, start_2, end_1, end_2])
-
-                # elasped_1 = start_2 - start_1
-                # elasped_2 = end_1 - start_2
-                # # elasped_2 = end_1 - start_1
-                # elasped_3 = end_2 - end_1
-
-                # elasped_list_1.append(elasped_1)
-                # elasped_list_2.append(elasped_2)
-                # elasped_list_3.append(elasped_3)
-                break
-    print('ephe results. elasped {}'.format(elasped_list_1))
-    # print('ephe results. elasped {}'.format([elasped_list_1, elasped_list_2, elasped_list_3]))
-    # print('ephe results. elasped {}'.format([elasped_list_2, elasped_list_3]))
-else:
-    print(f'Test Default with size {OSIZE}')
+fan_out = True
+if fan_out:
+    read_num = 1
     write_name = 'dag_write_1'
-    read_name = 'dag_read_1'
-    dag_write_func = cloudburst_client.register(dag_write, write_name)
-    dag_read_func = cloudburst_client.register(dag_read, read_name)
+    read_names = [f'dag_read_{i}' for i in range(read_num)]
+    cloudburst_client.register(dag_write, write_name)
+    for n in read_names:
+        cloudburst_client.register(dag_read, n)
+    # cloudburst_client.register(dag_end, 'end_func')
 
     dag_name = 'dag_io'
-    functions = [write_name, read_name]
-    conns = [(write_name, read_name)]
+    functions = [write_name] + read_names
+    # functions = [write_name, 'end_func'] + read_names
+    conns = [(write_name, n) for n in read_names]
+    # conns = [(write_name, n) for n in read_names] + [(n, 'end_func') for n in read_names]
     success, error = cloudburst_client.register_dag(dag_name, functions, conns)
     print(f'Create dag {dag_name} {success} {error}')
 
-    key_n = 'dag1'
-    arg_map = {write_name: [key_n, OSIZE, use_str]}
+    arg_map = {write_name: [OSIZE]}
+    res = cloudburst_client.call_dag(dag_name, arg_map, True)
+    print(res)
 
     elasped_list = []
     for _ in range(iter_num):
-        cloudburst_client.call_dag(dag_name, arg_map, True)
-        start = cloudburst_client.get('start_')
-        end = cloudburst_client.get('end_')
-        elasped_list.append(end - start)
+        res = cloudburst_client.call_dag(dag_name, arg_map, True)
+        time.sleep(0.2)
+        # print(res)
+    #     all_reader_res = res.split(',')
+    #     duras = []
+    #     for r in all_reader_res:
+    #         end = int(r.split('|')[1])
+    #         start = int(r.split('|')[0])
+    #         duras.append(end - start)
+
+    #     elasped_list.append(max(duras))
+    # print('dag results: elasped {}'.format(elasped_list))
+    suc, err = cloudburst_client.delete_dag(dag_name)
+else:
+    write_num = 16
+    write_names = [f'dag_write_{i}' for i in range(write_num)]
+    read_name = 'dag_read'
+    cloudburst_client.register(dag_read_multi, read_name)
+    for n in write_names:
+        cloudburst_client.register(dag_write, n)
+
+    dag_name = 'dag_io'
+    functions = [read_name] + write_names
+    conns = [(n, read_name) for n in write_names]
+    success, error = cloudburst_client.register_dag(dag_name, functions, conns)
+    print(f'Create dag {dag_name} {success} {error}')
+
+    arg_map = {n: [OSIZE] for n in write_names}
+    res = cloudburst_client.call_dag(dag_name, arg_map, True)
+    print(res)
+
+    elasped_list = []
+    for _ in range(iter_num):
+        res = cloudburst_client.call_dag(dag_name, arg_map, True)
+        # print(res)
+        all_res = res.split(',')
+        read_t = int(all_res[-1])
+        write_ts = all_res[0].split('|')
+        duras = []
+        for write_t in write_ts:
+            duras.append(read_t - int(write_t))
+
+        elasped_list.append(max(duras))
     print('dag results: elasped {}'.format(elasped_list))
     suc, err = cloudburst_client.delete_dag(dag_name)
-

@@ -193,6 +193,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                        call_frequency)
 
         if dag_call_socket in socks and socks[dag_call_socket] == zmq.POLLIN:
+            start_t = int(time.time() * 1000000)
             call = DagCall()
             call.ParseFromString(dag_call_socket.recv())
 
@@ -220,6 +221,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                 call_frequency[fname.name] += 1
 
             response = call_dag(call, pusher_cache, dags, policy)
+            sched_t = int(time.time() * 1000000)
+            logging.info(f'App function {name} recv: {start_t}, scheduled: {sched_t}')
             dag_call_socket.send(response.SerializeToString())
 
         if (dag_delete_socket in socks and socks[dag_delete_socket] ==
@@ -267,6 +270,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
 
         if continuation_socket in socks and socks[continuation_socket] == \
                 zmq.POLLIN:
+            start_t = int(time.time() * 1000000)
+
             continuation = Continuation()
             continuation.ParseFromString(continuation_socket.recv())
 
@@ -281,7 +286,8 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
                 call.function_args[source].values.extend([result])
 
             call_dag(call, pusher_cache, dags, policy, continuation.id)
-
+            sched_t = int(time.time() * 1000000)
+            print(f'App function {call.name} recv: {start_t}, scheduled: {sched_t}')
             for fname in dag.functions:
                 call_frequency[fname.name] += 1
 

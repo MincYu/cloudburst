@@ -120,7 +120,8 @@ def _exec_func_normal(kvs, func, args, user_lib, cache):
 
     if refs:
         refs = _resolve_ref_normal(refs, kvs, cache)
-
+    run_func_t = time.time()
+    # logging.info(f'Executor timer. exec_func_normal run_func: {run_func_t}')
     return _run_function(func, refs, args, user_lib)
 
 
@@ -157,7 +158,8 @@ def _run_function(func, refs, args, user_lib):
                     arg[idx] = refs[val.key]
 
             func_args += (arg,)
-
+    func_t = time.time()
+    # logging.info(f'Executor timer. run_function func: {func_t}')
     return func(*func_args)
 
 
@@ -314,13 +316,18 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
             fargs[idx] = [fset[idx] for fset in farg_sets]
     else: # There will only be one thing in farg_sets
         fargs = farg_sets[0]
-
+    
+    exec_func_t = time.time()
+    # logging.info(f'Executor timer. exec_dag_function exec_func: {exec_func_t}')
     result_list = _exec_func_normal(kvs, function, fargs, user_lib, cache)
     if not isinstance(result_list, list):
         result_list = [result_list]
 
     successes = []
     is_sink = True
+
+    end_func_t = time.time()
+    # logging.info(f'Executor timer. exec_dag_function end_func: {end_func_t}')
 
     for schedule, result in zip(schedules, result_list):
         this_ref = None
@@ -342,6 +349,8 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
 
                 dest_ip = schedule.locations[conn.sink]
                 sckt = pusher_cache.get(sutils.get_dag_trigger_address(dest_ip))
+                send_trigger_t = time.time()
+                # logging.info(f'Executor timer. exec_dag_function send_trigger: {send_trigger_t}')
                 sckt.send(new_trigger.SerializeToString())
 
     if is_sink:

@@ -67,8 +67,7 @@ if [[ "$ROLE" = "executor" ]]; then
     python3.6 cloudburst/server/executor/server.py
 
     if [[ "$?" = "1" ]]; then
-      cat cloudburst/log_executor.txt
-      exit 1
+      echo "Get error. Restarting"
     fi
   done
 elif [[ "$ROLE" = "scheduler" ]]; then
@@ -81,8 +80,7 @@ elif [[ "$ROLE" = "scheduler" ]]; then
   while true; do
     python3.6 cloudburst/server/scheduler/server.py
     if [[ "$?" = "1" ]]; then
-      cat cloudburst/log_scheduler.txt
-      exit 1
+      echo "Get error. Restarting"
     fi
   done
   # python3.6 cloudburst/server/scheduler/server.py

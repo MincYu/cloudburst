@@ -203,6 +203,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if exec_socket in socks and socks[exec_socket] == zmq.POLLIN:
             work_start = time.time()
+            logging.info(f'Executor timer. exec_socket recv: {work_start}')
             exec_function(exec_socket, client, user_library, cache,
                           function_cache, has_ephe=has_ephe)
             user_library.close()
@@ -215,7 +216,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if dag_queue_socket in socks and socks[dag_queue_socket] == zmq.POLLIN:
             work_start = time.time()
-
+            logging.info(f'Executor timer. dag_queue_socket recv: {work_start}')
             # In order to effectively support batching, we have to make sure we
             # dequeue lots of schedules in addition to lots of triggers. Right
             # now, we're not going to worry about supporting batching here,
@@ -265,7 +266,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                         logging.error('%s not in function cache', fname)
                         utils.generate_error_response(schedule, client, fname)
                         continue
-
+                    exec_start = time.time()
+                    # logging.info(f'Executor timer. dag_queue_socket exec_dag: {exec_start}')
                     # We don't support actual batching for when we receive a
                     # schedule before a trigger, so everything is just a batch of
                     # size 1 if anything.
@@ -293,6 +295,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if dag_exec_socket in socks and socks[dag_exec_socket] == zmq.POLLIN:
             work_start = time.time()
+            logging.info(f'Executor timer. dag_exec_socket recv: {work_start}')
 
             # How many messages to dequeue -- BATCH_SIZE_MAX or 1 depending on
             # the function configuration.
@@ -374,7 +377,8 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
                     schedule = queue[fname][key[0]]
                     schedules.append(schedule)
 
-
+            exec_start = time.time()
+            # logging.info(f'Executor timer. dag_exec_socket exec_dag: {exec_start}')
             # Pass all of the trigger_sets into exec_dag_function at once.
             # We also include the batching variaible to make sure we know
             # whether to pass lists into the fn or not.
