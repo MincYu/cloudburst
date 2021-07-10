@@ -16,7 +16,6 @@ import zmq
 
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
-# from ephekvs.client import KVSClient
 
 serializer = Serializer()
 
@@ -62,9 +61,6 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
 
         self.has_ephe = False
         self.ephe_client = None
-        # if has_ephe:
-        #     self.ephe_client = KVSClient(thread_id=tid, context=context)
-        #     self.session = None
 
     def put(self, ref, value, use_session=False, durable=True):
         if durable or not self.has_ephe:
