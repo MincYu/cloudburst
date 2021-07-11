@@ -318,7 +318,7 @@ def _exec_dag_function_normal(pusher_cache, kvs, trigger_sets, function,
         fargs = farg_sets[0]
     
     exec_func_t = time.time()
-    # logging.info(f'Executor timer. exec_dag_function exec_func: {exec_func_t}')
+    logging.info(f'Executor timer. exec_dag_function: {exec_func_t}')
     result_list = _exec_func_normal(kvs, function, fargs, user_lib, cache)
     if not isinstance(result_list, list):
         result_list = [result_list]

@@ -203,7 +203,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if exec_socket in socks and socks[exec_socket] == zmq.POLLIN:
             work_start = time.time()
-            logging.info(f'Executor timer. exec_socket recv: {work_start}')
+            # logging.info(f'Executor timer. exec_socket recv: {work_start}')
             exec_function(exec_socket, client, user_library, cache,
                           function_cache, has_ephe=has_ephe)
             user_library.close()
@@ -295,7 +295,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
 
         if dag_exec_socket in socks and socks[dag_exec_socket] == zmq.POLLIN:
             work_start = time.time()
-            logging.info(f'Executor timer. dag_exec_socket recv: {work_start}')
+            # logging.info(f'Executor timer. dag_exec_socket recv: {work_start}')
 
             # How many messages to dequeue -- BATCH_SIZE_MAX or 1 depending on
             # the function configuration.
