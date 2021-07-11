@@ -65,7 +65,7 @@ REPORT_THRESHOLD = 5
 
 # logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(message)s')
 
-logging.basicConfig(filename='log_scheduler.txt', level=logging.INFO,
+logging.basicConfig(filename='log_scheduler.txt', level=logging.INFO, filemode="w",
                     format='%(asctime)s %(message)s')
 
 def scheduler(ip, mgmt_ip, route_addr, policy_type):

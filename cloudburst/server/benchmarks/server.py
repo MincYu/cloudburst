@@ -31,7 +31,7 @@ import cloudburst.server.utils as sutils
 
 BENCHMARK_START_PORT = 3000
 
-logging.basicConfig(filename='log_benchmark.txt', level=logging.INFO,
+logging.basicConfig(filename='log_benchmark.txt', level=logging.INFO, filemode="w",
                     format='%(asctime)s %(message)s')
 
 def benchmark(ip, cloudburst_address, tid):

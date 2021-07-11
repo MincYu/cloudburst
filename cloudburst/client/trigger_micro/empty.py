@@ -1,4 +1,4 @@
-from cloudburst.client.client import CloudburstConnection
+from cloudburst.client.client import *
 from cloudburst.shared.serializer import Serializer
 
 import logging
@@ -37,10 +37,19 @@ success, error = cloudburst_clients[0].register_dag(dag_name, ['empty'], [])
 print(f'Create dag {dag_name} {success} {error}')
 
 arg_map = {'empty': [0]}
+dc = DagCall()
+dc.name = dag_name
+dc.consistency = NORMAL
+args = [serializer.dump(0, serialize=False)]
+al = dc.function_args['empty']
+al.values.extend(args)
+
 def run(cloudburst_client, req_num):
     start = time.time()
     for _ in range(req_num):
-        cloudburst_client.call_dag(dag_name, arg_map)
+        cloudburst_client.dag_call_sock.send(dc.SerializeToString())
+        r = GenericResponse()
+        r.ParseFromString(cloudburst_client.dag_call_sock.recv())
     end = time.time()
     return end - start
 

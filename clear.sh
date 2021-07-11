@@ -11,7 +11,6 @@ for pod in ${nodes[@]}; do
     # kubectl exec -it $pod -c cache-container -- pkill -9 cache &> /dev/null &
     for func_id in $(seq 1 20); do
         kubectl exec -it $pod -c function-${func_id} -- pkill -9 python &> /dev/null &
-        kubectl exec -it $pod -c function-${func_id} -- rm hydro/cloudburst/log_executor.txt &> /dev/null &
     done
 done
 echo "waiting clear"
