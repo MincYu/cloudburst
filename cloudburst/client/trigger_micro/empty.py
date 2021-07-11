@@ -36,8 +36,9 @@ func = cloudburst_clients[0].register(dag_empty, 'empty')
 success, error = cloudburst_clients[0].register_dag(dag_name, ['empty'], [])
 print(f'Create dag {dag_name} {success} {error}')
 
-print(f'Sleep 20s...')
-time.sleep(20)
+sleep_time = 10
+print(f'Sleep {sleep_time}s...')
+time.sleep(sleep_time)
 
 arg_map = {'empty': [0]}
 dc = DagCall()
@@ -47,12 +48,14 @@ args = [serializer.dump(0, serialize=False)]
 al = dc.function_args['empty']
 al.values.extend(args)
 
+msg_str = dc.SerializeToString()
 def run(cloudburst_client, req_num):
     start = time.time()
     for _ in range(req_num):
-        cloudburst_client.dag_call_sock.send(dc.SerializeToString())
-        r = GenericResponse()
-        r.ParseFromString(cloudburst_client.dag_call_sock.recv())
+        cloudburst_client.dag_call_sock.send(msg_str)
+        cloudburst_client.dag_call_sock.recv()
+        # r = GenericResponse()
+        # r.ParseFromString(cloudburst_client.dag_call_sock.recv())
     end = time.time()
     return end - start
 
