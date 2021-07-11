@@ -77,6 +77,7 @@ def scheduler(ip, mgmt_ip, route_addr, policy_type):
     scheduler_id = str(uuid.uuid4())
 
     context = zmq.Context(1)
+    context.set(zmq.MAX_SOCKETS, 10000)
 
     # A mapping from a DAG's name to its protobuf representation.
     dags = {}

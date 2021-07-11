@@ -5,7 +5,7 @@ def dag_inc(cloudburst, val):
     val += 1
     return val
 
-INC_NUM = 10
+INC_NUM = 1000
 func_names = [f'inc{i}' for i in range(INC_NUM)]
 inc_funcs = [cloudburst_client.register(dag_inc, n) for n in func_names]
 dag_name = 'func_chain'
@@ -15,6 +15,7 @@ print(f'Create dag {dag_name} {success} {error}')
 
 arg_map = {'inc0': [0]}
 res = cloudburst_client.call_dag(dag_name, arg_map).get()
+print(res)
 elasped_list = []
 for _ in range(10):
     start = time.time()

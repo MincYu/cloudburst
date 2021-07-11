@@ -13,8 +13,8 @@ import os
 from cloudburst.server.benchmarks import utils
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-f_elb = 'abfb3d2ffc99042128b5021106d4f94b-212926308.us-east-1.elb.amazonaws.com'
-my_ip = '3.80.60.167'
+f_elb = 'a873fb1bfda47471a96af9fe8e89e0c1-1003545628.us-east-1.elb.amazonaws.com'
+my_ip = '18.234.45.207'
 timeout = 10
 
 cloudburst_client = CloudburstConnection(f_elb, my_ip, tid=0, local=False)
