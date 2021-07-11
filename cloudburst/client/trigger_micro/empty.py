@@ -36,6 +36,9 @@ func = cloudburst_clients[0].register(dag_empty, 'empty')
 success, error = cloudburst_clients[0].register_dag(dag_name, ['empty'], [])
 print(f'Create dag {dag_name} {success} {error}')
 
+print(f'Sleep 20s...')
+time.sleep(20)
+
 arg_map = {'empty': [0]}
 dc = DagCall()
 dc.name = dag_name

@@ -44,6 +44,7 @@ gen_yml_list() {
 # ./scripts/build.sh
 
 cd $HYDRO_HOME/cloudburst
+git pull
 
 touch conf/cloudburst-config.yml
 echo "ip: $IP" >> conf/cloudburst-config.yml
@@ -85,10 +86,11 @@ elif [[ "$ROLE" = "scheduler" ]]; then
   done
   # python3.6 cloudburst/server/scheduler/server.py
 elif [[ "$ROLE" = "benchmark" ]]; then
-  echo "benchmark:" >> conf/cloudburst-config.yml
-  echo "    cloudburst_address: $FUNCTION_ADDR" >> conf/cloudburst-config.yml
-  echo "    thread_id: $THREAD_ID" >> conf/cloudburst-config.yml
+  # echo "benchmark:" >> conf/cloudburst-config.yml
+  # echo "    cloudburst_address: $FUNCTION_ADDR" >> conf/cloudburst-config.yml
+  # echo "    thread_id: $THREAD_ID" >> conf/cloudburst-config.yml
 
-  python3.6 cloudburst/server/benchmarks/server.py
+  # python3.6 cloudburst/server/benchmarks/server.py
+  sleep infinity
 fi
 
