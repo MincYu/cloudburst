@@ -53,7 +53,7 @@ def run(cloudburst_client, req_num):
     start = time.time()
     for _ in range(req_num):
         cloudburst_client.dag_call_sock.send(msg_str)
-        cloudburst_client.dag_call_sock.recv()
+        # cloudburst_client.dag_call_sock.recv()
         # r = GenericResponse()
         # r.ParseFromString(cloudburst_client.dag_call_sock.recv())
     end = time.time()
