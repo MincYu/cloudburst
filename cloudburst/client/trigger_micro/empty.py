@@ -48,17 +48,19 @@ args = [serializer.dump(0, serialize=False)]
 al = dc.function_args['empty']
 al.values.extend(args)
 
-msg_str = dc.SerializeToString()
 def run(cloudburst_client, req_num):
+    dc.response_address = cloudburst_client.response_address
+    msg_str = dc.SerializeToString()
+
     start = time.time()
     fail_count = 0
     for _ in range(req_num):
         cloudburst_client.dag_call_sock.send(msg_str)
-        # cloudburst_client.dag_call_sock.recv()
-        r = GenericResponse()
-        r.ParseFromString(cloudburst_client.dag_call_sock.recv())
-        if not r.success:
-            fail_count += 1
+        cloudburst_client.dag_call_sock.recv()
+        # r = GenericResponse()
+        # r.ParseFromString(cloudburst_client.dag_call_sock.recv())
+        # if not r.success:
+        #     fail_count += 1
     end = time.time()
     return end - start, fail_count
 

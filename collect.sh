@@ -7,7 +7,7 @@ prefix=$1
 
 func_nodes=$(kubectl get pod | grep func | cut -d " " -f 1 | tr -d " ")
 
-# sched_nodes=$(kubectl get pod | grep schedu | cut -d " " -f 1 | tr -d " ")
+sched_nodes=$(kubectl get pod | grep schedu | cut -d " " -f 1 | tr -d " ")
 # for pod in ${sched_nodes[@]}; do
 #     kubectl exec -it $pod -- tail -1000 hydro/cloudburst/log_scheduler.txt | grep 'App func' | tail -100 &> $log_dir/${prefix}k_sched.txt
 # done
@@ -24,8 +24,12 @@ func_nodes=$(kubectl get pod | grep func | cut -d " " -f 1 | tr -d " ")
 # done
 
 # throughput
+
+for pod in ${sched_nodes[@]}; do
+    kubectl exec -it $pod -- cat hydro/cloudburst/log_scheduler.txt &> $log_dir/sched_${pod}.txt
+done
 for pod in ${func_nodes[@]}; do
     for func_id in $(seq 1 20); do
-        kubectl exec -it $pod -c function-${func_id} -- cat hydro/cloudburst/log_executor.txt | grep 'Executor timer. exec_dag_function' &> $log_dir/${prefix}k_${pod}_${func_id}.txt
+        kubectl exec -it $pod -c function-${func_id} -- cat hydro/cloudburst/log_executor.txt &> $log_dir/${prefix}k_${pod}_${func_id}.txt
     done
 done
