@@ -69,7 +69,7 @@ class CloudburstConnection():
         # Picks a random offset of 10, mostly to alleviate port conflicts when
         # running in local mode.
         self.kvs_client = AnnaTcpClient(kvs_addr, ip, local=local,
-                                        offset=tid + 100)
+                                        offset=tid + 400)
 
         self.func_create_sock = self.context.socket(zmq.REQ)
         self.func_create_sock.connect(self.service_addr % FUNC_CREATE_PORT)

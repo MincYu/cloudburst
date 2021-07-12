@@ -14,4 +14,9 @@ for pod in ${nodes[@]}; do
     done
 done
 echo "waiting clear"
+mana_nodes=$(kubectl get pod | grep management | cut -d " " -f 1 | tr -d " ")
+for pod in ${mana_nodes[@]}; do
+    kubectl exec -it $pod -- pkill -9 python
+done
+
 wait
